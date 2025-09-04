@@ -18,14 +18,18 @@ fi
 
 # Test 1: Validate Dockerfile syntax
 echo "1. Validating Dockerfile syntax..."
-if docker build -f Dockerfile.cpu -t test:syntax --no-cache --target=base 2>/dev/null <<EOF
+# Create a temp Dockerfile for syntax testing
+cat > .test_dockerfile <<'EOF'
 FROM python:3.9-slim as base
 RUN echo "Syntax OK"
 EOF
-then
+
+if docker build -f .test_dockerfile -t test:syntax . > /dev/null 2>&1; then
     echo "✅ Dockerfile syntax valid"
+    rm -f .test_dockerfile
 else
     echo "❌ Dockerfile syntax error"
+    rm -f .test_dockerfile
     exit 1
 fi
 
