@@ -1,0 +1,54 @@
+name: Container Build and Test
+
+on:
+  push:
+    branches: [ main, feature/container-testing ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+    
+    - name: Build Docker container
+      run: |
+        cd container
+        docker build -t esmfold:test -f Dockerfile .
+    
+    - name: Test container availability
+      run: |
+        docker run --rm esmfold:test --help
+    
+    - name: Test single protein processing
+      run: |
+        cd container
+        mkdir -p test_output
+        docker run --rm \
+          -v $PWD/../test_data:/input:ro \
+          -v $PWD/test_output:/output \
+          esmfold:test \
+          -i /input/single_protein.fasta \
+          -o /output \
+          --num-recycles 1 \
+          --chunk-size 128
+        
+        # Verify output
+        if [ -f "test_output/test_ubiquitin.pdb" ]; then
+          echo "✓ Single protein test passed"
+        else
+          echo "❌ Single protein test failed"
+          exit 1
+        fi
+    
+    - name: Upload test results
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: test-results
+        path: container/test_output/
