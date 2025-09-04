@@ -1,0 +1,38 @@
+# ESMFold CPU-only container for testing and development
+# This version works on macOS and systems without GPUs
+FROM python:3.9-slim
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    wget \
+    git \
+    curl \
+    build-essential \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set working directory
+WORKDIR /app
+
+# Install PyTorch CPU-only version (smaller, faster to build)
+RUN pip install --no-cache-dir \
+    torch --index-url https://download.pytorch.org/whl/cpu
+
+# Install ESM with dependencies
+# Note: We skip model download in this test version
+RUN pip install --no-cache-dir \
+    "fair-esm" \
+    biopython \
+    numpy
+
+# Create directories
+RUN mkdir -p /data/input /data/output
+
+# Simple test script to verify installation
+RUN python -c "import torch; import esm; print('ESM version:', esm.__version__)"
+
+# Entry point
+ENTRYPOINT ["python", "-m", "esm.scripts.fold"]
+
+# Default command shows help
+CMD ["--help"]
