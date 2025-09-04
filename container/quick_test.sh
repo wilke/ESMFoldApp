@@ -54,13 +54,15 @@ else
     exit 1
 fi
 
-# Test 6: Quick ESM import test
+# Test 6: Quick ESM import test (with PyTorch dependency)
 echo -n "ESM package... "
 if docker run --rm --platform linux/amd64 python:3.9-slim bash -c \
-    "pip install -q fair-esm 2>/dev/null && python -c 'import esm' 2>/dev/null"; then
+    "pip install -q torch --index-url https://download.pytorch.org/whl/cpu 2>/dev/null && \
+     pip install -q fair-esm 2>/dev/null && \
+     python -c 'import esm' 2>/dev/null"; then
     echo "✅"
 else
-    echo "⚠️  (will install during build)"
+    echo "⚠️  (needs PyTorch first)"
 fi
 
 echo ""

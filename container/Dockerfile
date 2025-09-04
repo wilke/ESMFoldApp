@@ -12,15 +12,18 @@ RUN apt-get update && apt-get install -y \
 # Set working directory
 WORKDIR /app
 
-# Install Python dependencies
-# Using the official ESM package with esmfold extras
+# Install Python dependencies in correct order
+# PyTorch is already in the base image, but we need additional packages
 RUN pip install --no-cache-dir \
-    "fair-esm[esmfold]" \
     biopython \
+    typing-extensions \
     dllogger \
     dm-tree \
     ml-collections \
     OpenFold==1.0.1
+
+# Install ESM after dependencies are ready
+RUN pip install --no-cache-dir "fair-esm[esmfold]"
 
 # Download and cache ESMFold models
 # This pre-downloads the model to avoid runtime delays

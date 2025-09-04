@@ -14,25 +14,29 @@ RUN apt-get update && apt-get install -y \
 # Set working directory
 WORKDIR /app
 
-# Install PyTorch CPU-only version (smaller, faster to build)
+# Install PyTorch CPU-only version first (required by ESM)
 RUN pip install --no-cache-dir \
     torch --index-url https://download.pytorch.org/whl/cpu
 
-# Install ESM with dependencies
-# Note: We skip model download in this test version
+# Install ESM and other dependencies
+# Note: We skip model download in this test version for speed
 RUN pip install --no-cache-dir \
-    "fair-esm" \
+    fair-esm \
     biopython \
-    numpy
+    numpy \
+    typing-extensions
 
 # Create directories
 RUN mkdir -p /data/input /data/output
 
-# Simple test script to verify installation
-RUN python -c "import torch; import esm; print('ESM version:', esm.__version__)"
+# Verify installation
+RUN python -c "import torch; import esm; print('PyTorch:', torch.__version__); print('ESM imported successfully')"
 
-# Entry point
-ENTRYPOINT ["python", "-m", "esm.scripts.fold"]
+# Check if esm-fold command exists, otherwise use module
+RUN which esm-fold 2>/dev/null || echo "Will use python -m esm.scripts.fold"
+
+# Entry point - try esm-fold first, fallback to module
+ENTRYPOINT ["sh", "-c", "if command -v esm-fold > /dev/null; then exec esm-fold \"$@\"; else exec python -m esm.scripts.fold \"$@\"; fi", "--"]
 
 # Default command shows help
 CMD ["--help"]
