@@ -1,5 +1,8 @@
-Bootstrap: docker
-From: pytorch/pytorch:1.12.1-cuda11.3-cudnn8-devel
+Bootstrap: localimage
+From: /nfs/ml_lab/projects/ml_lab/cepi/alphafold/images/pytorch_1.12.1-cuda11.3-cudnn8-devel.sif
+
+# Bootstrap: docker
+# From: pytorch_1.12.1-cuda11.3-cudnn8-devel.sif
 
 %post
     # Install system dependencies
@@ -10,14 +13,16 @@ From: pytorch/pytorch:1.12.1-cuda11.3-cudnn8-devel
         && apt-get clean \
         && rm -rf /var/lib/apt/lists/*
 
-    # Install Python dependencies for ESMFold
-    # First install fair-esm base package
-    pip install --no-cache-dir fair-esm
+    # Clone ESM repository and install from source
+    # This ensures we get the esm-fold command-line tool
+    cd /opt
+    git clone https://github.com/facebookresearch/esm.git
+    cd esm
     
-    # Install fair-esm with esmfold extras
-    pip install --no-cache-dir "fair-esm[esmfold]"
+    # Install ESM with esmfold extras
+    pip install --no-cache-dir -e ".[esmfold]"
     
-    # Install dllogger from GitHub
+    # Install additional dependencies
     pip install --no-cache-dir 'dllogger @ git+https://github.com/NVIDIA/dllogger.git'
     
     # Try to install OpenFold, but continue if it fails (needs CUDA dev tools)
@@ -33,7 +38,7 @@ From: pytorch/pytorch:1.12.1-cuda11.3-cudnn8-devel
     export PATH=/opt/conda/bin:$PATH
 
 %runscript
-    exec esm-fold "$@"
+    exec /opt/conda/bin/esm-fold "$@"
 
 %labels
     Author BV-BRC
@@ -58,4 +63,5 @@ From: pytorch/pytorch:1.12.1-cuda11.3-cudnn8-devel
     
     Note: Use --nv flag for GPU acceleration.
     
-    The container uses the official esm-fold command from Meta's ESM package.
+    The container includes the official ESM repository installed from source,
+    providing the esm-fold command-line tool from Meta.
