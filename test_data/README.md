@@ -36,3 +36,24 @@ When processed through ESMFold, each sequence should produce:
 - Medium sequences (100-200 aa): ~30-60 seconds
 - Long sequences (>500 aa): ~2-5 minutes
 - Times may vary based on GPU availability and model caching
+
+## v0.1.0 Test Results (2025-09-05)
+
+### Environment
+- **Container**: esmfold.v0.1.sif (Apptainer)
+- **Platform**: Lambda13 (NVIDIA H100 NVL)
+- **Model**: ESM2_t36_3B_UR50D
+- **CUDA**: 11.3
+- **PyTorch**: 1.12.1
+
+### Test Status
+- **Model Loading**: ✅ Successfully downloaded (5.6GB)
+- **GPU Detection**: ✅ 8x H100 GPUs available
+- **GPU Memory**: ✅ ~87GB allocated during inference
+- **GPU Utilization**: ✅ 100% during active inference
+- **Container CLI**: ✅ esm-fold command working
+
+### Notes
+- First run requires model download and CUDA kernel compilation
+- Container successfully built from source with OpenFold support
+- GPU inference confirmed working on H100 architecture
