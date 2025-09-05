@@ -1,22 +1,29 @@
 # ESMFold Container Status
 
+**Last Updated**: 2025-09-04 14:00 PST
+
 ## Current State
 
 ### ✅ Completed
 - Docker and Apptainer definition files created
-- Test data prepared with various protein sequences
-- Comprehensive testing strategy developed
-- Staged testing scripts for different environments
+- Test data prepared with various protein sequences (5 test proteins)
+- Comprehensive testing strategy developed (3-stage approach)
+- Staged testing scripts for different environments (6 scripts)
 - Dependency issues fixed (PyTorch before ESM)
+- Custom CLI wrapper created (esm_fold_wrapper.py)
+- Documentation complete (5 documentation files)
+- CPU container builds successfully
+- Quick smoke test PASSED
+- Stage 1 syntax validation PASSED
 
-### 🔄 In Progress
-- Building CPU-only container on macOS
-- Testing basic functionality
+### ⚠️ Blocked
+- CPU container execution blocked by OpenFold dependency
+- Requires GPU environment for full OpenFold build
 
 ### ⏳ Pending
 - Full GPU testing on H100 server
 - Performance benchmarking
-- Integration with BV-BRC service script
+- Final validation to close issues #4, #5, #6
 
 ## Testing Stages
 
