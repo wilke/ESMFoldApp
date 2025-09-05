@@ -24,7 +24,10 @@ RUN pip install --no-cache-dir \
     fair-esm \
     biopython \
     numpy \
-    typing-extensions
+    typing-extensions \
+    omegaconf \
+    einops \
+    scipy
 
 # Create directories
 RUN mkdir -p /data/input /data/output
@@ -32,11 +35,12 @@ RUN mkdir -p /data/input /data/output
 # Verify installation
 RUN python -c "import torch; import esm; print('PyTorch:', torch.__version__); print('ESM imported successfully')"
 
-# Check if esm-fold command exists, otherwise use module
-RUN which esm-fold 2>/dev/null || echo "Will use python -m esm.scripts.fold"
+# Copy our wrapper script
+COPY esm_fold_wrapper.py /app/esm_fold_wrapper.py
+RUN chmod +x /app/esm_fold_wrapper.py
 
-# Entry point - try esm-fold first, fallback to module
-ENTRYPOINT ["sh", "-c", "if command -v esm-fold > /dev/null; then exec esm-fold \"$@\"; else exec python -m esm.scripts.fold \"$@\"; fi", "--"]
+# Entry point using our wrapper
+ENTRYPOINT ["python", "/app/esm_fold_wrapper.py"]
 
 # Default command shows help
 CMD ["--help"]
