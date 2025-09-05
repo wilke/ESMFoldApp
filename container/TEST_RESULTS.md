@@ -96,4 +96,32 @@ docker images | grep esmfold
 |-----------|--------|------|-------|
 | test:syntax | ✅ Built | 146MB | Syntax validation |
 | esmfold:cpu-test | 🔄 Building | TBD | CPU-only version |
-| esmfold:gpu | ⏳ Pending | TBD | Full GPU version |
+| esmfold:gpu | ⏳ Pending | TBD | Full GPU version (Docker) |
+| esmfold_pytorch.sif | ✅ Built | 2.9GB | Apptainer with PyTorch base |
+| esmfold_pytorch_devel.sif | ✅ Built | 6.7GB | Apptainer with CUDA dev + OpenFold |
+
+## Apptainer Migration Results - 2025-09-05
+
+### Successfully Built Containers:
+
+1. **esmfold_pytorch.sif** (2.9GB)
+   - Base: pytorch/pytorch:1.12.1-cuda11.3-cudnn8-runtime
+   - PyTorch 1.12.1 ✅
+   - ESM 2.0.0 ✅
+   - CUDA 11.3 support ✅
+   - OpenFold skipped (needs dev tools)
+
+2. **esmfold_pytorch_devel.sif** (6.7GB) 
+   - Base: pytorch/pytorch:1.12.1-cuda11.3-cudnn8-devel
+   - PyTorch 1.12.1 ✅
+   - ESM 2.0.0 ✅
+   - OpenFold 1.0.0 ✅ (compiled with CUDA kernels)
+   - CUDA 11.3 with nvcc ✅
+   - Full ESMFold functionality ✅
+
+### Key Achievements:
+- ✅ Migrated from Docker to Apptainer
+- ✅ Resolved MKL symbol compatibility issues
+- ✅ Successfully compiled OpenFold with CUDA support
+- ✅ GPU acceleration confirmed working with --nv flag
+- ✅ All dependencies installed and verified
