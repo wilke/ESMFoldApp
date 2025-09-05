@@ -1,21 +1,26 @@
 # GPU Testing Handoff Document
 
-## Quick Start for H100 Testing
+## Quick Start for Lambda13 Testing
 
-### 1. Transfer Files
+### 1. Clone from GitHub
 ```bash
-# From your local machine
-scp -r ESMFoldApp/container/ user@h100-server:~/ESMFoldApp/
-scp -r ESMFoldApp/test_data/ user@h100-server:~/ESMFoldApp/
+# On Lambda13
+git clone https://github.com/wilke/ESMFoldApp.git
+cd ESMFoldApp
+git checkout feature/container-testing
 ```
 
-### 2. Build GPU Container
+### 2. Navigate to Container Directory
 ```bash
-cd ~/ESMFoldApp/container
+cd ESMFoldApp/container
+```
+
+### 3. Build GPU Container
+```bash
 docker build -f Dockerfile -t esmfold:gpu .
 ```
 
-### 3. Run GPU Tests
+### 4. Run GPU Tests
 ```bash
 # Quick validation
 ./test_stage3_gpu.sh
@@ -104,9 +109,9 @@ ls -la output/*.pdb
    ```bash
    git checkout feature/container-testing
    git pull origin feature/container-testing
-   echo "✅ GPU tests passed on H100" >> container/TEST_RESULTS.md
+   echo "✅ GPU tests passed on Lambda13" >> container/TEST_RESULTS.md
    git add container/TEST_RESULTS.md
-   git commit -m "test: Confirm GPU validation on H100"
+   git commit -m "test: Confirm GPU validation on Lambda13"
    git push origin feature/container-testing
    ```
 
@@ -117,7 +122,7 @@ ls -la output/*.pdb
 
 ## Performance Expectations
 
-On H100 GPU:
+On Lambda13 GPU:
 - Container build: 20-30 minutes
 - Single protein (76 aa): 10-20 seconds
 - Full test suite: 5-10 minutes
