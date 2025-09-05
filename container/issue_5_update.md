@@ -55,4 +55,16 @@ apptainer run --nv \
 - Test batch processing with multiple proteins
 - Optimize parameters for H100 architecture
 
-The container is working correctly and GPU acceleration is confirmed. The issue can be closed once the first inference run completes successfully.
+## ⚠️ Critical Issue Found
+
+**PyTorch 1.12.1 is incompatible with H100 GPUs (sm_90)**
+
+The container failed with:
+- CUDA capability error: H100 requires sm_90 support
+- PyTorch 1.12.1 only supports up to sm_86 (A100)
+- CUDA out of memory error as a result
+
+### Solution
+Created `esmfold_h100.def` with PyTorch 2.0.1 which supports H100 architecture. This will be v0.1.1 release.
+
+The issue will be closed once the H100-compatible container is built and tested.
