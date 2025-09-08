@@ -193,7 +193,14 @@ sub build_esmfold_command {
         push @cmd, '--bind', "$input_file:/input.fasta";
         push @cmd, '--bind', "$output_dir:/output";
         push @cmd, $container_path;
-        push @cmd, 'esm-fold';  # Use built-in esm-fold command
+        
+        # Check if wrapper exists in container, otherwise use esm-fold directly
+        my $wrapper_check = `apptainer exec $container_path test -x /scripts/esm-fold-wrapper && echo "exists"`;
+        if ($wrapper_check =~ /exists/) {
+            push @cmd, '/scripts/esm-fold-wrapper';  # Use wrapper to ensure correct Python
+        } else {
+            push @cmd, 'esm-fold';  # Use built-in esm-fold command
+        }
         
         # Adjust paths for container
         $input_file = '/input.fasta';
