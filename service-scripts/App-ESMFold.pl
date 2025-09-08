@@ -10,6 +10,7 @@ use Bio::KBase::AppService::AppConfig;
 use File::Basename;
 use File::Path qw(make_path remove_tree);
 use File::Temp;
+use FindBin;
 use JSON;
 use Data::Dumper;
 
@@ -167,12 +168,44 @@ sub build_esmfold_command {
     my @cmd;
     
     # Check if we're using container or native installation
-    if ($ENV{ESMFOLD_CONTAINER}) {
-        # Use singularity container
-        @cmd = ('singularity', 'run', $ENV{ESMFOLD_CONTAINER});
+    my $container_path = $ENV{ESMFOLD_CONTAINER} || '/nfs/ml_lab/projects/ml_lab/cepi/alphafold/images/esmfold.v0.1.sif';
+    
+    if (-f $container_path) {
+        # Use apptainer/singularity container
+        my $container_cmd = 'apptainer';
+        unless (system("which apptainer > /dev/null 2>&1") == 0) {
+            $container_cmd = 'singularity';
+            unless (system("which singularity > /dev/null 2>&1") == 0) {
+                die "Neither apptainer nor singularity found in PATH\n";
+            }
+        }
+        
+        @cmd = ($container_cmd, 'run');
+        
+        # Add GPU support if available and requested
+        if ($params->{use_gpu} && $params->{use_gpu} ne 'false') {
+            if (system("nvidia-smi > /dev/null 2>&1") == 0) {
+                push @cmd, '--nv';
+            }
+        }
+        
+        # Add bind mounts
+        push @cmd, '--bind', "$input_file:/input.fasta";
+        push @cmd, '--bind', "$output_dir:/output";
+        push @cmd, $container_path;
+        push @cmd, 'python', '/app/esm_fold_wrapper.py';
+        
+        # Adjust paths for container
+        $input_file = '/input.fasta';
+        $output_dir = '/output';
     } else {
-        # Use native installation
-        @cmd = ('esm-fold');
+        # Use native installation via scripts
+        my $script_path = "$FindBin::Bin/../scripts/esmfold";
+        if (-x $script_path) {
+            @cmd = ($script_path);
+        } else {
+            die "ESMFold executable not found. Please set ESMFOLD_CONTAINER or install ESMFold\n";
+        }
     }
     
     # Add required arguments
