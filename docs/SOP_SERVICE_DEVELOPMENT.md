@@ -53,7 +53,9 @@ apptainer shell --nv \
 
 # Inside container:
 cd /dev_container
-./deploy.sh  # Initialize dev_container
+./bootstrap /opt/patric-common/runtime  # Initialize with runtime
+source user-env.sh                      # Setup environment
+make                                     # Build modules
 cd modules/ESMFoldApp
 # Test service scripts
 ```

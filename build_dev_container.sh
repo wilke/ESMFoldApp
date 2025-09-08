@@ -16,6 +16,7 @@ ESMFOLD_CONTAINER="/nfs/ml_lab/projects/ml_lab/cepi/alphafold/images/esmfold.v0.
 DEV_CONTAINER_REPO="/nfs/ml_lab/projects/ml_lab/cepi/alphafold/dev_container"
 MODELS_DIR="/nfs/ml_lab/projects/ml_lab/cepi/alphafold/models"
 OUTPUT_DIR="${OUTPUT_DIR:-/nfs/ml_lab/projects/ml_lab/cepi/alphafold/images}"
+RUNTIME_DIR="/nfs/ml_lab/projects/ml_lab/cepi/alphafold/runtime"
 
 # Colors for output
 RED='\033[0;31m'
@@ -66,19 +67,26 @@ check_prerequisites() {
 extract_runtime() {
     print_status "Extracting PATRIC runtime from ubuntu-dev container..."
     
-    RUNTIME_TAR="/tmp/patric-runtime-$(date +%Y%m%d).tar.gz"
+    RUNTIME_TAR="$RUNTIME_DIR/patric-runtime-$(date +%Y%m%d).tar.gz"
     
     if [ -f "$RUNTIME_TAR" ]; then
-        print_warning "Runtime tar already exists, skipping extraction"
+        print_warning "Runtime tar already exists at: $RUNTIME_TAR"
     else
-        apptainer exec "$UBUNTU_DEV_CONTAINER" \
-            tar -czf - -C / opt/patric-common/runtime 2>/dev/null > "$RUNTIME_TAR"
-        
-        # Verify tar structure
-        print_status "Verifying tar structure..."
-        tar -tzf "$RUNTIME_TAR" | head -3
-        
-        print_status "Runtime extracted to: $RUNTIME_TAR"
+        # Check if runtime already exists in the runtime directory
+        if [ -f "$RUNTIME_DIR/patric-runtime-20250908.tar.gz" ]; then
+            print_status "Using existing runtime from: $RUNTIME_DIR/patric-runtime-20250908.tar.gz"
+            RUNTIME_TAR="$RUNTIME_DIR/patric-runtime-20250908.tar.gz"
+        else
+            print_status "Extracting new runtime..."
+            apptainer exec "$UBUNTU_DEV_CONTAINER" \
+                tar -czf - -C / opt/patric-common/runtime 2>/dev/null > "$RUNTIME_TAR"
+            
+            # Verify tar structure
+            print_status "Verifying tar structure..."
+            tar -tzf "$RUNTIME_TAR" | head -3
+            
+            print_status "Runtime extracted to: $RUNTIME_TAR"
+        fi
     fi
 }
 
