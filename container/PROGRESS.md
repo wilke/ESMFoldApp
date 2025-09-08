@@ -28,7 +28,8 @@
 | Version | Base Image | GPU Support | Status |
 |---------|------------|-------------|---------|
 | v0.1.0 | PyTorch 1.12.1 CUDA 11.3 | V100 (sm_70), A100 (sm_80) | ✅ Built |
-| v0.1.1 | PyTorch 2.0.1 CUDA 11.7 | V100, A100, H100 (sm_90) | 🔄 Building |
+| v0.1.1 | PyTorch 2.0.1 CUDA 11.7 | V100, A100, H100 (sm_90) | ❌ OpenFold missing |
+| v0.1.2 | PyTorch 2.0.1 CUDA 11.7 | V100, A100, H100 (sm_90) | 🔄 Building (fixed) |
 
 ### GPU Compatibility Matrix
 
@@ -95,6 +96,9 @@
 ### Known Issues
 
 - **H100 Compatibility**: Requires PyTorch 2.0+ (issue #7)
+- **OpenFold Dependency**: ESMFold requires OpenFold; must be installed before ESM
+- **DeepSpeed Compatibility**: DeepSpeed 0.5.9 incompatible with PyTorch 2.0+ (needs >=0.9.0)
+- **CUDA Version Matching**: OpenFold requires matching CUDA versions between PyTorch and build tools
 - **Memory Usage**: 3B model uses ~87GB GPU memory
 - **First Run**: Extended time due to CUDA compilation
 

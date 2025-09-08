@@ -193,7 +193,7 @@ sub build_esmfold_command {
         push @cmd, '--bind', "$input_file:/input.fasta";
         push @cmd, '--bind', "$output_dir:/output";
         push @cmd, $container_path;
-        push @cmd, 'python', '/app/esm_fold_wrapper.py';
+        push @cmd, 'esm-fold';  # Use built-in esm-fold command
         
         # Adjust paths for container
         $input_file = '/input.fasta';
