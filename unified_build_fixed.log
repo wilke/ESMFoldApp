@@ -18,3 +18,13 @@ INFO:    Copying /nfs/ml_lab/projects/ml_lab/cepi/alphafold/dev_container/init.s
 INFO:    Copying /nfs/ml_lab/projects/ml_lab/cepi/alphafold/dev_container/user-env.sh to /dev_container/
 INFO:    Copying /nfs/ml_lab/projects/ml_lab/cepi/alphafold/dev_container/Makefile to /dev_container/
 INFO:    Running post scriptlet
++ echo Installing PATRIC runtime and BV-BRC environment...
+Installing PATRIC runtime and BV-BRC environment...
++ cd /
++ tar -xzf /tmp/patric-runtime.tar.gz
+tar (child): /tmp/patric-runtime.tar.gz: Cannot open: No such file or directory
+tar (child): Error is not recoverable: exiting now
+tar: Child returned status 2
+tar: Error is not recoverable: exiting now
+FATAL:   While performing build: while running engine: exit status 2
+[0;31mBuild failed![0m
