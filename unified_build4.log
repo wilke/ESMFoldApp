@@ -1,0 +1,16 @@
+ESMFold Unified Container Builder
+=================================
+
+[0;32mUsing compressed runtime: /nfs/ml_lab/projects/ml_lab/cepi/alphafold/runtime/patric.tar.gz[0m
+Building unified container...
+  Runtime: /nfs/ml_lab/projects/ml_lab/cepi/alphafold/runtime/patric.tar.gz
+  Output: /nfs/ml_lab/projects/ml_lab/cepi/alphafold/images/esmfold-bvbrc-20250917.sif
+
+INFO:    Starting build...
+INFO:    Verifying bootstrap image /nfs/ml_lab/projects/ml_lab/cepi/alphafold/images/esmfold.v0.1.sif
+WARNING: integrity: signature not found for object group 1
+WARNING: Bootstrap image could not be verified, but build will continue.
+INFO:    Copying /nfs/ml_lab/projects/ml_lab/cepi/alphafold/runtime/patric.tar.gz to /tmp/patric-runtime.tar.gz
+INFO:    Copying ../scripts/esm-fold-wrapper to /scripts/
+FATAL:   While performing build: unable to copy files from host to container fs: no source files found matching: ../scripts/esm-fold-wrapper
+[0;31mBuild failed![0m
