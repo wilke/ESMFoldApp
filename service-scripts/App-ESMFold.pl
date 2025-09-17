@@ -23,26 +23,50 @@ sub preflight {
     
     print STDERR "Preflight ESMFold with params:\n", Dumper($params);
     
-    # Calculate resource requirements based on input
-    my $memory = "32G";  # Default memory
-    my $cpu = 8;         # Default CPUs
-    my $runtime = 3600;  # Default 1 hour
-    
-    # Adjust based on parameters
-    if ($params->{max_sequence_length}) {
-        if ($params->{max_sequence_length} > 1024) {
-            $memory = "64G";
-            $runtime = 10800;  # 3 hours for very long sequences
-        } elsif ($params->{max_sequence_length} > 512) {
-            $memory = "48G";
-            $runtime = 7200;   # 2 hours for longer sequences
-        }
+    # Calculate resource requirements based on ESMFold model and sequence characteristics
+    my $memory = "32G";     # Base memory for ESM2 model loading
+    my $cpu = 8;           # Default CPUs
+    my $runtime = 600;     # 10 minutes base for short sequences
+    my $gpu_memory = "16G"; # GPU memory requirement
+
+    # Estimate sequence length from input (if available)
+    my $estimated_max_length = 400; # Conservative default
+    if ($params->{sequences} && -f $params->{sequences}) {
+        $estimated_max_length = estimate_max_sequence_length($params->{sequences});
+    } elsif ($params->{max_sequence_length}) {
+        $estimated_max_length = $params->{max_sequence_length};
     }
-    
+
+    # Adjust resources based on sequence length
+    # ESMFold memory usage scales with sequence length squared
+    if ($estimated_max_length > 1500) {
+        $memory = "64G";
+        $gpu_memory = "32G";
+        $runtime = 3600;   # 1 hour for very long sequences
+    } elsif ($estimated_max_length > 800) {
+        $memory = "48G";
+        $gpu_memory = "24G";
+        $runtime = 1800;   # 30 minutes for long sequences
+    } elsif ($estimated_max_length > 400) {
+        $memory = "40G";
+        $gpu_memory = "20G";
+        $runtime = 900;    # 15 minutes for medium sequences
+    }
+
+    # Adjust for CPU-only mode (much slower)
     if ($params->{use_gpu} && $params->{use_gpu} eq 'false') {
         $cpu = 16;
         $memory = "64G";
-        $runtime = 14400;  # 4 hours for CPU-only
+        $runtime *= 8;     # CPU inference is ~8x slower
+        $gpu_memory = "0G";
+    }
+
+    # Multiple sequences increase runtime
+    if ($params->{sequences}) {
+        my $seq_count = count_sequences($params->{sequences});
+        if ($seq_count > 10) {
+            $runtime = int($runtime * ($seq_count / 10) * 1.2);
+        }
     }
     
     my $pf = {
@@ -311,6 +335,48 @@ sub create_summary_report {
     close($fh);
     
     print "Created summary report: $file\n";
+}
+
+# Helper function to estimate max sequence length from FASTA file
+sub estimate_max_sequence_length {
+    my ($file) = @_;
+
+    return 400 unless -f $file;
+
+    open(my $fh, '<', $file) or return 400;
+    my $max_length = 0;
+    my $current_length = 0;
+
+    while (my $line = <$fh>) {
+        chomp $line;
+        if ($line =~ /^>/) {
+            $max_length = $current_length if $current_length > $max_length;
+            $current_length = 0;
+        } elsif ($line =~ /^[A-Za-z]+$/) {
+            $current_length += length($line);
+        }
+    }
+    $max_length = $current_length if $current_length > $max_length;
+    close($fh);
+
+    return $max_length || 400;
+}
+
+# Helper function to count sequences in FASTA file
+sub count_sequences {
+    my ($file) = @_;
+
+    return 1 unless -f $file;
+
+    open(my $fh, '<', $file) or return 1;
+    my $count = 0;
+
+    while (my $line = <$fh>) {
+        $count++ if $line =~ /^>/;
+    }
+    close($fh);
+
+    return $count || 1;
 }
 
 # Upload results to workspace
