@@ -80,7 +80,7 @@ run_test() {
     local start_time=$(date +%s.%N)
 
     # Run the container and capture GPU memory usage
-    /usr/bin/time -v singularity run --nv \
+    /usr/bin/time -v singularity exec --nv \
         --bind "$TEST_DIR:/input,$test_output_dir:/output" \
         "$CONTAINER" \
         esm-fold \
