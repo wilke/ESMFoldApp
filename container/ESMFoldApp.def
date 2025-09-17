@@ -6,13 +6,13 @@ From: /nfs/ml_lab/projects/ml_lab/cepi/alphafold/images/esmfold.v0.1.sif
     PATRIC_RUNTIME_TAR /tmp/patric-runtime.tar.gz
     
     # Add ESMFold wrapper script
-    ../scripts/esm-fold-wrapper /scripts/
-    
+    scripts/esm-fold-wrapper /scripts/
+
     # Add service scripts
-    ../service-scripts/App-ESMFold.pl /service-scripts/
-    
+    service-scripts/App-ESMFold.pl /service-scripts/
+
     # Add app specifications
-    ../app_specs/ESMFold.json /app_specs/
+    app_specs/ESMFold.json /app_specs/
     
     # Add dev_container files for initialization
     /nfs/ml_lab/projects/ml_lab/cepi/alphafold/dev_container/init.sh /dev_container/
