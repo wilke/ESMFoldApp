@@ -54,7 +54,7 @@ echo "  Output: $OUTPUT_IMAGE"
 echo
 
 # Build the container
-if apptainer build --force "$OUTPUT_IMAGE" "$TMP_DEF"; then
+if singularity build --fakeroot --force "$OUTPUT_IMAGE" "$TMP_DEF"; then
     echo -e "${GREEN}Build successful!${NC}"
     
     # Create symlink for easy access
@@ -66,20 +66,20 @@ if apptainer build --force "$OUTPUT_IMAGE" "$TMP_DEF"; then
     # Test the container
     echo
     echo "Testing container..."
-    apptainer test "$OUTPUT_IMAGE"
+    singularity test "$OUTPUT_IMAGE"
     
     echo
     echo -e "${GREEN}Container ready: $OUTPUT_IMAGE${NC}"
     echo
     echo "Test commands:"
     echo "  # Test ESMFold:"
-    echo "  apptainer run --nv $SYMLINK esm-fold --help"
+    echo "  singularity run --nv $SYMLINK esm-fold --help"
     echo
     echo "  # Test service script:"
-    echo "  apptainer exec $SYMLINK perl -c /service-scripts/App-ESMFold.pl"
+    echo "  singularity exec $SYMLINK perl -c /service-scripts/App-ESMFold.pl"
     echo
     echo "  # Interactive shell:"
-    echo "  apptainer shell $SYMLINK"
+    echo "  singularity shell $SYMLINK"
 else
     echo -e "${RED}Build failed!${NC}"
     exit 1
