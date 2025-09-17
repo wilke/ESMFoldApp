@@ -1,0 +1,11 @@
+ESMFold Performance Testing
+==========================
+Container: /nfs/ml_lab/projects/ml_lab/cepi/alphafold/images/esmfold.v0.1.sif
+Results: /nfs/ml_lab/projects/ml_lab/cepi/alphafold/ESMFoldApp/performance_results/performance_20250917_123601.csv
+
+Testing: 50aa, model=esm2_t36_3B_UR50D, chunk_size=128
+25/09/17 12:36:04 | INFO | root | Reading sequences from /input/test_50aa.fasta
+25/09/17 12:36:04 | INFO | root | Loaded 1 sequences from /input/test_50aa.fasta
+25/09/17 12:36:04 | INFO | root | Loading model
+25/09/17 12:36:09 | INFO | torch.distributed.nn.jit.instantiator | Created a temporary directory at /tmp/tmpylc0xzwb
+25/09/17 12:36:09 | INFO | torch.distributed.nn.jit.instantiator | Writing /tmp/tmpylc0xzwb/_remote_module_non_scriptable.py
