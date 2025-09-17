@@ -3,7 +3,7 @@ From: /nfs/ml_lab/projects/ml_lab/cepi/alphafold/images/esmfold.v0.1.sif
 
 %files
     # Add PATRIC runtime (will be replaced with actual path during build)
-    PATRIC_RUNTIME_TAR /tmp/patric-runtime.tar.gz
+    PATRIC_RUNTIME_TAR /patric-runtime.tar.gz
     
     # Add ESMFold wrapper script
     scripts/esm-fold-wrapper /scripts/
@@ -24,8 +24,8 @@ From: /nfs/ml_lab/projects/ml_lab/cepi/alphafold/images/esmfold.v0.1.sif
     
     # Extract PATRIC runtime
     cd /
-    tar -xzf /tmp/patric-runtime.tar.gz
-    rm /tmp/patric-runtime.tar.gz
+    tar -xzf /patric-runtime.tar.gz
+    rm /patric-runtime.tar.gz
     
     # Verify runtime extraction
     if [ ! -d /opt/patric-common/runtime ]; then
