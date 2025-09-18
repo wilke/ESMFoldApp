@@ -26,6 +26,78 @@ From: /nfs/ml_lab/projects/ml_lab/cepi/alphafold/images/cuda_11.3.1-devel-ubuntu
     # Set Python 3 as default python
     update-alternatives --install /usr/bin/python python /usr/bin/python3 1
 
+    # Get and Install Miniconda
+    MINICONDA_VERSION=py39_4.12.0
+    MINICONDA_INSTALLER=Miniconda3-$MINICONDA_VERSION-Linux-x86_64.sh
+    MINICONDA_PREFIX=/opt/miniconda
+    wget --quiet https://repo.anaconda.com/miniconda/$MINICONDA_INSTALLER -O /tmp/$MINICONDA_INSTALLER
+    bash /tmp/$MINICONDA_INSTALLER -b -p $MINICONDA_PREFIX
+    rm /tmp/$MINICONDA_INSTALLER
+    export PATH="$MINICONDA_PREFIX/bin:$PATH"
+    echo "export PATH=$MINICONDA_PREFIX/bin:\$PATH" >> /etc/profile.d/conda.sh
+    $MINICONDA_PREFIX/bin/conda init bash
+    $MINICONDA_PREFIX/bin/conda clean -afy
+
+        # Create and activate conda environment with latest Python and pip
+        $MINICONDA_PREFIX/bin/conda create -y -n esmfold python=3.10 pip
+        source $MINICONDA_PREFIX/bin/activate esmfold
+        conda activate esmfold
+        python -m pip install --upgrade pip setuptools
+
+        # Install PyTorch 1.12.1 with CUDA 11.3 support in conda env
+        python -m pip install --no-cache-dir \
+            torch==1.12.1+cu113 \
+            torchvision==0.13.1+cu113 \
+            torchaudio==0.12.1 \
+            --extra-index-url https://download.pytorch.org/whl/cu113
+
+        # Install core dependencies from ESMFold environment.yml in conda env
+        python -m pip install --no-cache-dir \
+            'biopython==1.79' \
+            'deepspeed==0.5.9' \
+            'dm-tree==0.1.6' \
+            'ml-collections==0.1.0' \
+            'numpy==1.21.2' \
+            'PyYAML==5.4.1' \
+            'requests==2.26.0' \
+            'scipy==1.7.1' \
+            'tqdm==4.62.2' \
+            'typing-extensions==3.10.0.2' \
+            'pytorch_lightning>=1.5,<1.6' \
+            'wandb==0.12.21' \
+            'omegaconf' \
+            'einops' \
+            'fairscale'
+
+        # Install additional scientific packages in conda env
+        python -m pip install --no-cache-dir \
+            'pandas' \
+            'pytest'
+
+        # Clone ESM repository and install from source in conda env
+        cd /opt
+        git clone https://github.com/facebookresearch/esm.git
+        cd esm
+        python -m pip install --no-cache-dir -e ".[esmfold]"
+
+        # Install dllogger in conda env
+        python -m pip install --no-cache-dir 'dllogger @ git+https://github.com/NVIDIA/dllogger.git'
+
+        # Try to install OpenFold with CUDA compilation in conda env
+        echo "Installing OpenFold with CUDA support..."
+        python -m pip install --no-cache-dir \
+            'openfold @ git+https://github.com/aqlaboratory/openfold.git@4b41059694619831a7db195b7e0988fc4ff3a307' || \
+            echo "WARNING: OpenFold installation failed, ESMFold may work without it"
+
+        # Create directories for models and data
+        mkdir -p /data/models /data/input /data/output
+        mkdir -p /models/torch/hub
+
+        # Test ESMFold installation in conda env
+        echo "Testing ESMFold installation..."
+        python -c "import esm; print('ESM imported successfully')"
+        python -m esm-fold --help || echo "ESMFold CLI test completed"
+
     # Upgrade pip
     python3 -m pip install --upgrade pip setuptools==59.5.0
 
@@ -103,6 +175,9 @@ From: /nfs/ml_lab/projects/ml_lab/cepi/alphafold/images/cuda_11.3.1-devel-ubuntu
 
     # Ensure Python 3 is used
     export PATH=/usr/bin:$PATH
+
+    # Language settings
+    export LC_ALL=C
 
 %runscript
     # Run esm-fold with provided arguments
