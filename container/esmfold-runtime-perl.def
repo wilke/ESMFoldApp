@@ -1,0 +1,263 @@
+Bootstrap: localimage
+From: /nfs/ml_lab/projects/ml_lab/cepi/alphafold/images/esmfold_base.sif
+
+%files
+    # Add PATRIC runtime (will be replaced with actual path during build)
+    # PATRIC_RUNTIME_TAR /patric-runtime.tar.gz
+
+    # # Add ESMFold wrapper script
+    # ../scripts/esm-fold-wrapper /scripts/
+
+    # # Add service scripts
+    # ../service-scripts/App-ESMFold.pl /service-scripts/
+
+    # # Add app specifications
+    # ../app_specs/ESMFold.json /app_specs/
+    modules-base.dat /ubuntu-bootstrap/modules-base.dat
+
+%post
+    echo "Installing PATRIC runtime and BV-BRC environment..."
+
+    # Extract PATRIC runtime
+    # cd /
+    # tar -xzf /patric-runtime.tar.gz
+    # rm /patric-runtime.tar.gz
+
+
+    BASE=/opt/patric-common
+    RT=$BASE/runtime
+
+    mkdir -p $RT /ubuntu-bootstrap
+
+    cd /
+    git clone https://github.com/BV-BRC/runtime_build
+    cd runtime_build
+
+    export BUILD_TOOLS=$RT/build-tools
+
+    ./bootstrap_modules.pl -d $RT  -m /ubuntu-bootstrap/modules-base.dat
+    # ./bootstrap_modules.pl -d $RT  -m ubuntu-22/modules-bio-core.dat
+    # ./bootstrap_modules.pl -d $RT  -m ubuntu-22/modules-anno-core.dat
+
+    # Verify runtime extraction
+    if [ ! -d /opt/patric-common/runtime ]; then
+        echo "ERROR: PATRIC runtime extraction failed"
+        exit 1
+    fi
+
+    # PATH=/opt/patric-common/runtime/bin:$PATH
+    # which cpan
+    # cpan App::cpanminus
+    # while read module; do
+    #     cpanm "$module"
+    # done < ./runtime-modules/kb_perl_runtime/module-list
+
+    # # Clone and set up dev_container with core modules
+    # echo "Cloning BV-BRC dev_container and core modules..."
+    # cd /
+    # git clone https://github.com/BV-BRC/dev_container.git
+    # cd /dev_container
+
+    # # Clone core modules
+    # mkdir -p modules
+    # cd modules
+
+    # # Clone each core module from the list
+    # git clone https://github.com/BV-BRC/p3_auth.git
+    # git clone https://github.com/BV-BRC/app_service.git
+    # git clone https://github.com/BV-BRC/p3_cli.git
+    # git clone https://github.com/BV-BRC/p3_core.git
+    # git clone https://github.com/BV-BRC/sra_import.git
+    # git clone https://github.com/BV-BRC/p3_deployment.git
+    # git clone https://github.com/BV-BRC/typecomp.git
+    # git clone https://github.com/BV-BRC/Workspace.git
+    # git clone https://github.com/TheSEED/seed_core.git
+    # git clone https://github.com/TheSEED/seed_gjo.git
+
+    # # TODO: Create ESMFoldApp module directory and copy service files
+    # # mkdir -p ESMFoldApp/lib
+    # # cp -r /service-scripts /dev_container/modules/ESMFoldApp/service-scripts
+    # # cp -r /app_specs /dev_container/modules/ESMFoldApp/app_specs
+    # # cp -r /scripts /dev_container/modules/ESMFoldApp/scripts
+
+    # # Bootstrap the dev_container environment
+    # cd /dev_container
+    # ./bootstrap /opt/patric-common/runtime
+    # ls -ltr
+
+    # # Build modules
+    # # source user-env.sh
+    # . /dev_container/user-env.sh
+    # make
+    
+    # # Save original ESMFold Python environment before modifications
+    # echo "Preserving ESMFold Python environment..."
+    # ESMFOLD_PYTHON=$(which python3)
+    # echo "export ESMFOLD_PYTHON_ORIGINAL=$ESMFOLD_PYTHON" > /etc/esmfold-env
+    # echo "export ESMFOLD_PATH_ORIGINAL=$PATH" >> /etc/esmfold-env
+    
+    # # Install additional dependencies for BV-BRC
+    # # apt-get update && apt-get install -y \
+    # #     perl \
+    # #     libfindbin-libs-perl \
+    # #     libjson-perl \
+    # #     libwww-perl \
+    # #     libio-socket-ssl-perl \
+    # #     libfile-slurp-perl \
+    # #     libdata-dumper-simple-perl \
+    # #     make \
+    # #     && apt-get clean \
+    # #     && rm -rf /var/lib/apt/lists/*
+    
+    # # Make scripts executable
+    # # chmod +x /scripts/esm-fold-wrapper
+    # # chmod +x /service-scripts/App-ESMFold.pl
+
+    # # Replace PATRIC Perl and Python with system versions to avoid GLIBC version mismatch
+    # # PATRIC binaries were built with GLIBC 2.32-2.35 but Ubuntu 20.04 has GLIBC 2.31
+    # # if [ -f /opt/patric-common/runtime/bin/perl ]; then
+    # #     echo "Replacing PATRIC Perl with system Perl for GLIBC compatibility..."
+    # #     mv /opt/patric-common/runtime/bin/perl /opt/patric-common/runtime/bin/perl.orig
+    # #     ln -s /usr/bin/perl /opt/patric-common/runtime/bin/perl
+    # # fi
+
+    # if [ -f /opt/patric-common/runtime/bin/python3 ]; then
+    #     echo "Replacing PATRIC Python with system Python for GLIBC compatibility..."
+    #     mv /opt/patric-common/runtime/bin/python3 /opt/patric-common/runtime/bin/python3.orig
+    #     ln -s /usr/bin/python3 /opt/patric-common/runtime/bin/python3
+    # fi
+    
+    # # Initialize dev_container environment
+    # cd /dev_container
+    # if [ -f init.sh ]; then
+    #     echo "Running dev_container init.sh..."
+    #     chmod +x init.sh
+    #     ./init.sh
+    # fi
+    
+    # # Create directories for BV-BRC
+    # mkdir -p /workspace
+    # mkdir -p /models
+    # mkdir -p /kb/deployment
+    # mkdir -p /kb/module
+    
+    # # Link ESMFoldApp module into expected location
+    # ln -s /service-scripts /kb/module/service-scripts
+    # ln -s /app_specs /kb/module/app_specs
+    # ln -s /scripts /kb/module/scripts
+    
+    # echo "PATRIC runtime and BV-BRC environment installation complete"
+
+%environment
+    # Source the user environment first if it exists
+    if [ -f /dev_container/user-env.sh ]; then
+        . /dev_container/user-env.sh
+    fi
+
+    # PATRIC/BV-BRC paths - APPEND to preserve ESMFold's Python
+    export PATH=$PATH:/opt/patric-common/runtime/bin
+
+    # Set up PERL5LIB with dev_container modules
+    # export KB_PERL_PATH=/dev_container/modules/app_service/lib:/dev_container/modules/Workspace/lib:/dev_container/modules/p3_core/lib:/dev_container/modules/p3_auth/lib:/dev_container/modules/p3_cli/lib:/dev_container/modules/p3_deployment/lib:/dev_container/modules/seed_core/lib:/dev_container/modules/seed_gjo/lib:/dev_container/modules/typecomp/lib
+    # TODO: Add when ESMFoldApp module is created: :/dev_container/modules/ESMFoldApp/lib
+    # export PERL5LIB=/opt/patric-common/runtime/lib/perl5:$KB_PERL_PATH:$PERL5LIB
+
+    # BV-BRC specific environment
+    # export KB_TOP=/kb/deployment
+    # export KB_RUNTIME=/opt/patric-common/runtime
+    # export KB_MODULE_DIR=/kb/module
+    
+    # ESMFold specific - ensure our wrapper is found first
+    export PATH=/scripts:$PATH
+    
+    # Model cache location
+    export ESMFOLD_MODELS=/models
+    export TORCH_HOME=/models/torch
+    export TORCH_HUB=/models/torch/hub
+    
+    # Workspace defaults
+    export P3_WORKSPACE=/workspace
+    
+    # Container indicator
+    export ESMFOLD_CONTAINER=unified
+    export IN_BVBRC_CONTAINER=1
+
+    # Language settings
+    export LC_ALL=C
+
+%runscript
+    # Source user environment if available
+    if [ -f /dev_container/user-env.sh ]; then
+        . /dev_container/user-env.sh
+    fi
+    
+    # Detect what's being requested
+    case "$1" in
+        esm-fold)
+            # Use our wrapper to ensure correct Python
+            shift
+            exec /scripts/esm-fold-wrapper "$@"
+            ;;
+        App-ESMFold*)
+            # Run the service script
+            exec perl /service-scripts/App-ESMFold.pl "$@"
+            ;;
+        shell|bash)
+            # Interactive shell with environment
+            exec /bin/bash --login
+            ;;
+        *)
+            # Default: pass through
+            exec "$@"
+            ;;
+    esac
+
+%test
+    echo "Testing container environment..."
+    
+    # Test Perl/PATRIC environment
+    perl -e 'print "Perl OK\n"'
+    
+    # Test Python/ESMFold environment
+    python3 -c "print('Python OK')"
+    
+    # Test if ESMFold wrapper exists
+    test -x /scripts/esm-fold-wrapper && echo "ESMFold wrapper OK"
+    
+    # Test if service script exists
+    test -f /service-scripts/App-ESMFold.pl && echo "Service script OK"
+    
+    # Test if user-env.sh was created
+    test -f /dev_container/user-env.sh && echo "User environment OK"
+    
+    echo "Container tests completed"
+
+%labels
+    Author BV-BRC
+    Application ESMFold
+    Version 1.0.0
+    Description ESMFold protein structure prediction service for BV-BRC with PATRIC runtime
+
+%help
+    ESMFold BV-BRC Service Container
+    
+    This container includes:
+    - ESMFold protein structure prediction
+    - PATRIC/BV-BRC runtime environment
+    - BV-BRC service integration
+    
+    Usage:
+    # Run ESMFold directly
+    singularity run container.sif esm-fold -i input.fasta -o output/
+    
+    # Run as BV-BRC service
+    singularity run container.sif App-ESMFold parameters.json
+    
+    # Interactive shell
+    singularity shell container.sif
+    
+    Environment:
+    - ESMFold Python preserved via wrapper script
+    - PATRIC runtime in /opt/patric-common/runtime
+    - Models cached in /models
+    - Workspace in /workspace
