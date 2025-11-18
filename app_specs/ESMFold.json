@@ -1,0 +1,113 @@
+{
+    "id": "ESMFold",
+    "script": "App-ESMFold",
+    "label": "ESMFold Protein Structure Prediction",
+    "description": "Predict 3D protein structures from amino acid sequences using Meta's ESMFold deep learning model",
+    "version": "0.1.0",
+    "help": "ESMFold is a deep learning model that predicts protein structures directly from sequences without requiring multiple sequence alignments or homology templates.",
+    
+    "parameters": [
+        {
+            "id": "sequences",
+            "type": "wsfile",
+            "required": 1,
+            "default": null,
+            "label": "Input sequences",
+            "desc": "Protein sequences in FASTA format",
+            "wstype": "Contigs"
+        },
+        {
+            "id": "output_path",
+            "type": "folder",
+            "required": 1,
+            "default": null,
+            "label": "Output folder",
+            "desc": "Path to which the output will be written"
+        },
+        {
+            "id": "output_file_basename",
+            "type": "string",
+            "required": 0,
+            "default": "esmfold_results",
+            "label": "Output file basename",
+            "desc": "Basename for the generated output files"
+        },
+        {
+            "id": "num_recycles",
+            "type": "int",
+            "required": 0,
+            "default": 4,
+            "label": "Number of recycles",
+            "desc": "Number of recycling iterations (0-4). More recycles can improve accuracy but increase runtime",
+            "min": 0,
+            "max": 4
+        },
+        {
+            "id": "chunk_size",
+            "type": "int",
+            "required": 0,
+            "default": 128,
+            "label": "Chunk size",
+            "desc": "Size of chunks for processing long sequences. Smaller values use less memory",
+            "min": 16,
+            "max": 512
+        },
+        {
+            "id": "max_sequence_length",
+            "type": "int",
+            "required": 0,
+            "default": 512,
+            "label": "Maximum sequence length",
+            "desc": "Maximum allowed sequence length. Longer sequences require more memory",
+            "min": 100,
+            "max": 2048
+        },
+        {
+            "id": "batch_sequences",
+            "type": "bool",
+            "required": 0,
+            "default": "false",
+            "label": "Batch processing",
+            "desc": "Process multiple sequences in batches for improved throughput"
+        },
+        {
+            "id": "max_tokens_per_batch",
+            "type": "int",
+            "required": 0,
+            "default": 1024,
+            "label": "Max tokens per batch",
+            "desc": "Maximum number of tokens (amino acids) per batch when batch processing is enabled",
+            "min": 512,
+            "max": 4096
+        },
+        {
+            "id": "use_gpu",
+            "type": "bool",
+            "required": 0,
+            "default": "true",
+            "label": "Use GPU",
+            "desc": "Use GPU acceleration if available. Significantly faster than CPU"
+        },
+        {
+            "id": "cpu_offload",
+            "type": "bool",
+            "required": 0,
+            "default": "false",
+            "label": "CPU offloading",
+            "desc": "Enable CPU offloading for large models to reduce GPU memory usage"
+        }
+    ],
+    
+    "default_memory": "32G",
+    "default_cpu": 8,
+    "default_runtime": 3600,
+    "default_storage": "10G",
+    
+    "nonstandard_resources": {
+        "gpu": {
+            "enabled": true,
+            "required": false,
+            "description": "GPU acceleration for faster predictions"
+        }
+    }
+}

@@ -1,0 +1,44 @@
+ESMFold Integration Test
+========================
+
+[1;33mUnified container not found, using base container[0m
+Using container: /nfs/ml_lab/projects/ml_lab/cepi/alphafold/images/esmfold.v0.1.sif
+
+Test 1: Container Basic Functionality
+--------------------------------------
+  [0;32m✓[0m ESMFold help command works
+  [0;32m✓[0m Container internal tests pass
+
+Test 2: Service Script Availability
+------------------------------------
+  [1;33m⚠[0m Service script not found (base container mode)
+
+Test 3: Create Test Sequence
+-----------------------------
+  [0;32m✓[0m Test sequence created (164 amino acids)
+
+Test 4: ESMFold Execution
+--------------------------
+Running ESMFold on test sequence (this may take several minutes)...
+  [0;31m✗[0m ESMFold execution failed or timed out (600s)
+  Check log: /nfs/ml_lab/projects/ml_lab/cepi/alphafold/ESMFoldApp/integration_test_output/esmfold.log
+
+Test 5: Resource Usage
+-----------------------
+  [1;33m⚠[0m GPU usage not confirmed in logs
+  [0;32m✓[0m Current GPU memory usage: 1MB
+
+Integration Test Summary
+========================
+[0;32m✓ Container functional[0m
+[0;32m✓ ESMFold executable[0m
+[1;33m⚠ Structure generation issues[0m
+
+Test artifacts saved to: /nfs/ml_lab/projects/ml_lab/cepi/alphafold/ESMFoldApp/integration_test_output
+Logs available in: /nfs/ml_lab/projects/ml_lab/cepi/alphafold/ESMFoldApp/integration_test_output/esmfold.log
+
+Generated files:
+total 29
+drwxr-xr-x  2 wilke cels   3 Sep 17 12:15 .
+drwxr-xr-x 19 wilke cels  29 Sep 17 12:15 ..
+-rw-r--r--  1 wilke cels 281 Sep 17 12:15 esmfold.log

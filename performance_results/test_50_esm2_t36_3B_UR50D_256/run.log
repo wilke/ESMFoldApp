@@ -1,0 +1,30 @@
+25/09/17 12:37:05 | INFO | root | Reading sequences from /input/test_50aa.fasta
+25/09/17 12:37:05 | INFO | root | Loaded 1 sequences from /input/test_50aa.fasta
+25/09/17 12:37:05 | INFO | root | Loading model
+25/09/17 12:37:08 | INFO | torch.distributed.nn.jit.instantiator | Created a temporary directory at /tmp/tmpjctd7qfu
+25/09/17 12:37:08 | INFO | torch.distributed.nn.jit.instantiator | Writing /tmp/tmpjctd7qfu/_remote_module_non_scriptable.py
+25/09/17 12:37:53 | INFO | root | Starting Predictions
+25/09/17 12:37:56 | INFO | root | Predicted structure for test_50aa with length 49, pLDDT 86.4, pTM 0.764 in 3.3s. 1 / 1 completed.
+	Command being timed: "singularity exec --nv --bind /nfs/ml_lab/projects/ml_lab/cepi/alphafold/ESMFoldApp/test_data:/input,/nfs/ml_lab/projects/ml_lab/cepi/alphafold/ESMFoldApp/performance_results/test_50_esm2_t36_3B_UR50D_256:/output /nfs/ml_lab/projects/ml_lab/cepi/alphafold/images/esmfold.v0.1.sif esm-fold -i /input/test_50aa.fasta -o /output --chunk-size 256"
+	User time (seconds): 188.71
+	System time (seconds): 40.48
+	Percent of CPU this job got: 413%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 0:55.39
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 19673676
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 4237
+	Minor (reclaiming a frame) page faults: 9447916
+	Voluntary context switches: 25856
+	Involuntary context switches: 601
+	Swaps: 0
+	File system inputs: 921476
+	File system outputs: 88
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 0

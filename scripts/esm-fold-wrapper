@@ -1,0 +1,49 @@
+#!/bin/bash
+#
+# ESMFold wrapper script to ensure correct Python environment
+# This wrapper preserves the ESMFold Python path when PATRIC runtime is loaded
+#
+
+# Determine the correct Python path for ESMFold
+# Priority order:
+# 1. Conda environment if available
+# 2. System Python3 that has ESM installed
+# 3. Fallback to python3 in PATH
+
+if [ -x "/opt/conda/bin/python3" ]; then
+    ESMFOLD_PYTHON="/opt/conda/bin/python3"
+elif [ -x "/usr/bin/python3" ]; then
+    ESMFOLD_PYTHON="/usr/bin/python3"
+else
+    ESMFOLD_PYTHON="python3"
+fi
+
+# Find the actual esm-fold script location
+# It might be in different locations depending on installation
+if [ -x "/usr/local/bin/esm-fold" ]; then
+    ESMFOLD_SCRIPT="/usr/local/bin/esm-fold"
+elif [ -x "/opt/conda/bin/esm-fold" ]; then
+    ESMFOLD_SCRIPT="/opt/conda/bin/esm-fold"
+elif [ -x "/app/esm-fold" ]; then
+    ESMFOLD_SCRIPT="/app/esm-fold"
+else
+    # Try to find it using which (but skip this wrapper)
+    ESMFOLD_SCRIPT=$(PATH=${PATH//$(dirname $0):/} which esm-fold 2>/dev/null)
+    if [ -z "$ESMFOLD_SCRIPT" ]; then
+        echo "Error: Cannot find esm-fold script" >&2
+        exit 1
+    fi
+fi
+
+# Clear any PATRIC Python paths that might interfere
+unset PYTHONPATH
+
+# Execute esm-fold with the correct Python interpreter
+# Check if esm-fold is a Python script or binary
+if file "$ESMFOLD_SCRIPT" | grep -q "Python script"; then
+    # It's a Python script, run with our chosen Python
+    exec "$ESMFOLD_PYTHON" "$ESMFOLD_SCRIPT" "$@"
+else
+    # It's a binary or shell script, run directly
+    exec "$ESMFOLD_SCRIPT" "$@"
+fi
