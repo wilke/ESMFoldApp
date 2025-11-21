@@ -55,8 +55,8 @@ RUN $MINICONDA_PREFIX/bin/conda config --add channels conda-forge && \
     $MINICONDA_PREFIX/bin/conda config --remove channels defaults && \
     $MINICONDA_PREFIX/bin/conda config --set channel_priority strict
 
-# Create conda environment
-RUN $MINICONDA_PREFIX/bin/conda create -y -n esmfold python=${PYTHON_VERSION} pip && \
+# Create conda environment (override channels to avoid ToS requirement)
+RUN $MINICONDA_PREFIX/bin/conda create -y --override-channels --channel conda-forge -n esmfold python=${PYTHON_VERSION} pip && \
     $MINICONDA_PREFIX/bin/conda clean -afy
 
 # Activate conda environment for all subsequent RUN commands
