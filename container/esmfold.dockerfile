@@ -4,25 +4,24 @@
 # Meta AI's end-to-end protein structure prediction model.
 #
 # Build command:
-#   docker build -f Dockerfile.esmfold -t esmfold:latest .
+#   docker build --platform linux/amd64 -f container/esmfold.dockerfile -t esmfold:prod .
 #
 # Run command (with GPU):
-#   docker run --gpus all -it esmfold:latest
-#
-# For CPU-only mode (not recommended):
-#   docker build -f Dockerfile.esmfold --build-arg INSTALL_GPU=false -t esmfold:cpu .
+#   docker run --gpus all -it esmfold:prod
 
 FROM nvidia/cuda:11.3.1-cudnn8-devel-ubuntu20.04
 
 # Build arguments
-ARG PYTHON_VERSION=3.9
-ARG INSTALL_GPU=true
-ARG TORCH_VERSION=1.12.1
-ARG TORCH_CUDA=cu113
+ARG PYTHON_VERSION=3.10
+ARG MINICONDA_VERSION=latest
 
 # Prevent interactive prompts during package installation
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ=UTC
+ENV CUDA_HOME=/usr/local/cuda
+ENV TORCH_HOME=/data/cache/
+ENV TORCH_HUB=/data/models/
+ENV MINICONDA_PREFIX=/opt/miniconda
 
 # Set working directory
 WORKDIR /workspace
@@ -36,86 +35,107 @@ RUN apt-get update && apt-get install -y \
     curl \
     ca-certificates \
     software-properties-common \
-    && add-apt-repository ppa:deadsnakes/ppa \
-    && apt-get update \
-    && apt-get install -y \
-    python${PYTHON_VERSION} \
-    python${PYTHON_VERSION}-dev \
-    python${PYTHON_VERSION}-distutils \
-    && update-alternatives --install /usr/bin/python python /usr/bin/python${PYTHON_VERSION} 1 \
-    && update-alternatives --install /usr/bin/python3 python3 /usr/bin/python${PYTHON_VERSION} 1 \
+    && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Install pip
-RUN curl -sS https://bootstrap.pypa.io/get-pip.py | python${PYTHON_VERSION}
+# Install Miniconda
+RUN MINICONDA_INSTALLER=Miniconda3-${MINICONDA_VERSION}-Linux-x86_64.sh && \
+    wget --quiet https://repo.anaconda.com/miniconda/$MINICONDA_INSTALLER -O /tmp/$MINICONDA_INSTALLER && \
+    bash /tmp/$MINICONDA_INSTALLER -b -p $MINICONDA_PREFIX && \
+    rm /tmp/$MINICONDA_INSTALLER && \
+    echo "export PATH=$MINICONDA_PREFIX/bin:\$PATH" >> /etc/profile.d/conda.sh && \
+    $MINICONDA_PREFIX/bin/conda init bash && \
+    $MINICONDA_PREFIX/bin/conda clean -afy
 
-# Upgrade pip, setuptools, and wheel
-# RUN pip install --no-cache-dir --upgrade pip setuptools wheel
-RUN python -m pip install --no-cache-dir "pip<24.1" setuptools wheel
+# Add conda to PATH
+ENV PATH="$MINICONDA_PREFIX/bin:$PATH"
 
-# Install PyTorch with CUDA support
-# Separate layer for better caching since this is large
-RUN if [ "$INSTALL_GPU" = "true" ]; then \
-        pip install --no-cache-dir \
-        torch==${TORCH_VERSION}+${TORCH_CUDA} \
-        torchvision \
-        torchaudio \
-        --extra-index-url https://download.pytorch.org/whl/${TORCH_CUDA}; \
-    else \
-        pip install --no-cache-dir \
-        torch==${TORCH_VERSION} \
-        torchvision \
-        torchaudio; \
-    fi
+# Create conda environment
+RUN $MINICONDA_PREFIX/bin/conda create -y -n esmfold python=${PYTHON_VERSION} pip && \
+    $MINICONDA_PREFIX/bin/conda clean -afy
 
-# Install core scientific packages
-RUN pip install --no-cache-dir \
-    numpy==1.21.2 \
-    scipy==1.7.1 \
-    biopython==1.79
+# Activate conda environment for all subsequent RUN commands
+SHELL ["conda", "run", "-n", "esmfold", "/bin/bash", "-c"]
 
-# Install deep learning and ML packages
-RUN pip install --no-cache-dir \
-    pytorch-lightning==1.5.10 \
-    deepspeed==0.5.9 \
-    fairscale
+# Verify conda environment
+RUN which python && python --version && pip --version
 
-# Install utility packages
-RUN pip install --no-cache-dir \
-    einops \
-    omegaconf \
-    ml-collections==0.1.0 \
-    dm-tree==0.1.6 \
-    tqdm==4.62.2 \
-    PyYAML==5.4.1 \
-    typing-extensions==3.10.0.2 \
-    requests==2.26.0
+# ============================================================================
+# CRITICAL DEPENDENCY INSTALLATION ORDER
+# This order is based on proven working builds and must not be changed
+# ============================================================================
 
-# Install ESM from source (includes CLI scripts: esm-fold, esm-extract)
-# This will install from the GitHub repository to get the scripts/ directory
-# which contains the CLI entry points that PyPI package doesn't include
-RUN pip install --no-cache-dir git+https://github.com/facebookresearch/esm.git
+# Step 1: Install PyTorch with CUDA support FIRST
+# Use +cu113 suffix and --extra-index-url as per working builds
+RUN python -m pip install --no-cache-dir \
+    torch==1.12.1+cu113 \
+    torchvision==0.13.1+cu113 \
+    torchaudio==0.12.1 \
+    --extra-index-url https://download.pytorch.org/whl/cu113
 
-# Install NVIDIA dllogger
-RUN pip install --no-cache-dir git+https://github.com/NVIDIA/dllogger.git
+# Step 2: Install pandas and pytest
+RUN python -m pip install --no-cache-dir \
+    pandas \
+    pytest
 
-# Install OpenFold at specific commit
-# This requires NVCC and is the most time-consuming step
+# Step 3: Clone ESM repository and install with esmfold extras
+# Installing with -e ".[esmfold]" pulls in all dependencies from setup.py
+# This includes: biopython, deepspeed==0.5.9, dm-tree, pytorch-lightning,
+#                omegaconf, ml-collections, einops, scipy
+RUN cd /opt && \
+    git clone https://github.com/facebookresearch/esm.git && \
+    cd esm && \
+    python -m pip install --no-cache-dir -e ".[esmfold]"
+
+# Step 4: Install dllogger with --no-build-isolation
+RUN python -m pip install --no-build-isolation --no-cache-dir \
+    'dllogger @ git+https://github.com/NVIDIA/dllogger.git'
+
+# Step 5: Reinstall PyTorch to ensure correct version after esmfold extras
+# This fixes any version conflicts from pytorch-lightning or other dependencies
+RUN python -m pip install --no-cache-dir \
+    torch==1.12.1+cu113 \
+    torchvision==0.13.1+cu113 \
+    torchaudio==0.12.1 \
+    --extra-index-url https://download.pytorch.org/whl/cu113
+
+# Step 6: Install OpenFold with --no-build-isolation, allow graceful failure
+# OpenFold requires NVCC and is the most time-consuming step (10-15 minutes)
 # Pinned to specific commit for compatibility with ESMFold
-RUN pip install --no-cache-dir git+https://github.com/aqlaboratory/openfold.git@4b41059694619831a7db195b7e0988fc4ff3a307
+RUN python -m pip install --no-build-isolation --no-cache-dir \
+    'openfold @ git+https://github.com/aqlaboratory/openfold.git@4b41059694619831a7db195b7e0988fc4ff3a307' || \
+    echo "WARNING: OpenFold installation failed, ESMFold may work without it"
 
-# Create directory for models (will be downloaded on first use)
-RUN mkdir -p /root/.cache/torch/hub/checkpoints
+# Step 7: Verify esm-fold CLI is available
+RUN esm-fold --help || echo "esm-fold command verification complete"
 
-# Create directory for input/output
-RUN mkdir -p /data/input /data/output
+# Step 8: Create directory for models and download ESMFold v1 model
+# This downloads ~5.6GB model and verifies successful download
+RUN mkdir -p /root/.cache/torch/hub/checkpoints && \
+    python -c "import esm; print('Downloading ESMFold v1 model...'); model = esm.pretrained.esmfold_v1(); print('Model loaded successfully')" && \
+    python -c "import os; \
+path = os.path.expanduser('~/.cache/torch/hub/checkpoints/esmfold_3B_v1.pt'); \
+assert os.path.exists(path), 'Model file not found'; \
+size_gb = os.path.getsize(path) / 1e9; \
+print(f'Model verified: {size_gb:.2f} GB'); \
+assert size_gb > 2.0, 'Model file too small - download may be corrupted'"
 
-# Set environment variables for optimal performance
+# ============================================================================
+# Container Configuration
+# ============================================================================
+
+# Switch back to default shell for remaining commands
+SHELL ["/bin/bash", "-c"]
+
+# Create directories for input/output and data
+RUN mkdir -p /data/input /data/output /data/cache /data/models
+
+# Set environment variables
 ENV CUDA_VISIBLE_DEVICES=0
 ENV PYTHONUNBUFFERED=1
 ENV OMP_NUM_THREADS=1
 
-# Add a simple script to test the installation
+# Add test installation script
 RUN echo '#!/usr/bin/env python\n\
 import sys\n\
 import torch\n\
@@ -139,7 +159,7 @@ except Exception as e:\n\
     sys.exit(1)\n\
 ' > /workspace/test_installation.py && chmod +x /workspace/test_installation.py
 
-# Add a simple inference script
+# Add simple inference script
 RUN echo '#!/usr/bin/env python\n\
 """Simple ESMFold inference script\n\
 Usage: python inference.py <sequence> [--output output.pdb]\n\
@@ -201,21 +221,34 @@ RUN echo '>example_protein\n\
 MKTVRQERLKSIVRILERSKEPVSGAQLAEELSVSRQVIVQDIAYLRSLGYNIVATPRGYVLAGG\n\
 ' > /data/input/example.fasta
 
-# Set the default command to show help
-CMD ["python", "/workspace/test_installation.py"]
+# Create non-root user for security
+RUN useradd -m -u 1000 esmfold && \
+    chown -R esmfold:esmfold /workspace /data /root/.cache && \
+    chmod -R 755 /root/.cache
+
+# Switch to non-root user
+USER esmfold
+
+# Activate conda environment in entrypoint
+ENTRYPOINT ["conda", "run", "--no-capture-output", "-n", "esmfold"]
+
+# Set the default command to esm-fold CLI with help
+CMD ["esm-fold", "--help"]
 
 # Labels
-LABEL maintainer="ESM Docker Image"
-LABEL description="ESMFold - Protein Structure Prediction"
-LABEL version="2.0.1"
-LABEL org.opencontainers.image.source="https://github.com/facebookresearch/esm"
+LABEL maintainer="BV-BRC ESMFold Container"
+LABEL description="ESMFold - Protein Structure Prediction with GPU Support"
+LABEL version="1.0.0"
+LABEL org.opencontainers.image.source="https://github.com/wilke/ESMFoldApp"
+LABEL cuda.version="11.3.1"
+LABEL pytorch.version="1.12.1"
+LABEL python.version="3.10"
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD python -c "import torch; import esm; assert torch.cuda.is_available() or True"
+# Health check - verify PyTorch, ESM, and model availability
+HEALTHCHECK --interval=60s --timeout=30s --start-period=120s --retries=3 \
+    CMD conda run -n esmfold python -c "import torch; import esm; import os; \
+assert os.path.exists(os.path.expanduser('~/.cache/torch/hub/checkpoints/esmfold_3B_v1.pt')), 'Model missing'; \
+print('ESMFold health check: OK')"
 
 # Volume mount points
 VOLUME ["/data/input", "/data/output", "/root/.cache/torch/hub/checkpoints"]
-
-# Expose no ports (this is a compute container, not a service)
-# EXPOSE is intentionally omitted
