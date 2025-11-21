@@ -50,8 +50,9 @@ RUN MINICONDA_INSTALLER=Miniconda3-${MINICONDA_VERSION}-Linux-x86_64.sh && \
 # Add conda to PATH
 ENV PATH="$MINICONDA_PREFIX/bin:$PATH"
 
-# Configure conda to use conda-forge (avoids ToS requirement)
+# Configure conda to use only conda-forge (remove default channels to avoid ToS)
 RUN $MINICONDA_PREFIX/bin/conda config --add channels conda-forge && \
+    $MINICONDA_PREFIX/bin/conda config --remove channels defaults && \
     $MINICONDA_PREFIX/bin/conda config --set channel_priority strict
 
 # Create conda environment
