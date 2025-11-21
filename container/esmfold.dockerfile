@@ -50,6 +50,10 @@ RUN MINICONDA_INSTALLER=Miniconda3-${MINICONDA_VERSION}-Linux-x86_64.sh && \
 # Add conda to PATH
 ENV PATH="$MINICONDA_PREFIX/bin:$PATH"
 
+# Configure conda to use conda-forge (avoids ToS requirement)
+RUN $MINICONDA_PREFIX/bin/conda config --add channels conda-forge && \
+    $MINICONDA_PREFIX/bin/conda config --set channel_priority strict
+
 # Create conda environment
 RUN $MINICONDA_PREFIX/bin/conda create -y -n esmfold python=${PYTHON_VERSION} pip && \
     $MINICONDA_PREFIX/bin/conda clean -afy
