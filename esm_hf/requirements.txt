@@ -1,0 +1,17 @@
+# ESM HuggingFace Requirements
+# Modern ESMFold implementation using HuggingFace Transformers
+
+# PyTorch (install separately based on your CUDA version from pytorch.org)
+# For CUDA 12.1: pip install torch --index-url https://download.pytorch.org/whl/cu121
+# For CPU only: pip install torch --index-url https://download.pytorch.org/whl/cpu
+torch>=1.12.0
+
+# HuggingFace ecosystem
+transformers>=4.30.0
+accelerate>=0.20.0
+
+# Biological computing
+biopython
+
+# Optional but recommended for visualization
+# py3Dmol  # For interactive structure visualization in notebooks

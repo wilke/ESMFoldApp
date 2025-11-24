@@ -1,0 +1,90 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "esm-hf"
+version = "1.0.0"
+description = "ESMFold protein structure prediction using HuggingFace Transformers"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.8"
+authors = [
+    {name = "ESMFold HuggingFace Contributors"}
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+]
+keywords = ["protein", "structure prediction", "ESMFold", "transformers", "machine learning"]
+dependencies = [
+    "torch>=1.12.0",
+    "transformers>=4.30.0",
+    "accelerate>=0.20.0",
+    "biopython",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "black>=23.0.0",
+    "flake8>=6.0.0",
+    "isort>=5.12.0",
+    "mypy>=1.0.0",
+    "ipython>=8.0.0",
+]
+jupyter = [
+    "jupyter>=1.0.0",
+    "py3Dmol",
+]
+all = [
+    "esm-hf[dev,jupyter]",
+]
+
+[project.scripts]
+esm-fold-hf = "scripts.hf_fold:main"
+
+[project.urls]
+Homepage = "https://github.com/facebookresearch/esm"
+Documentation = "https://huggingface.co/facebook/esmfold_v1"
+Repository = "https://github.com/facebookresearch/esm"
+
+[tool.setuptools.packages.find]
+where = ["."]
+
+[tool.black]
+line-length = 99
+target-version = ["py38", "py39", "py310", "py311"]
+include = '\.pyi?$'
+exclude = '''
+/(
+    \.git
+    | \.venv
+    | build
+    | dist
+)/
+'''
+
+[tool.isort]
+profile = "black"
+line_length = 99
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = "test_*.py"
+addopts = "-v --tb=short"
