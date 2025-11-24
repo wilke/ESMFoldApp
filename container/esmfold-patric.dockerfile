@@ -103,8 +103,10 @@ ENV DEBIAN_FRONTEND=noninteractive
 # Install system Perl packages for PATRIC compatibility
 RUN apt-get -y update && apt-get -y install --no-install-recommends \
       perl \
+      cpanminus \
       libfindbin-libs-perl \
       libjson-perl \
+      libjson-xs-perl \
       libwww-perl \
       libio-socket-ssl-perl \
       libfile-slurp-perl \
