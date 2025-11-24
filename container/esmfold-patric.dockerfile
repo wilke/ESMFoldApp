@@ -72,6 +72,8 @@ RUN cd / && \
         echo "Attempt $i failed, retrying in 5s..."; sleep 5; \
       }; \
     done && \
+    # Install JSON::XS for BV-BRC modules
+    $RT/bin/cpanm --quiet --notest JSON::XS && \
     # Cleanup
     rm -rf /root/.cpan /root/.cpanm /tmp/* /var/tmp/*
 
