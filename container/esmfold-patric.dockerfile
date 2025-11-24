@@ -64,10 +64,7 @@ RUN mkdir -p $RT/bin $RT/lib $RT/etc $RT/man
 # Clone and build runtime_build (Perl runtime only, minimal)
 RUN cd / && \
     git clone --depth 1 https://github.com/BV-BRC/runtime_build && \
-    cd runtime_build && \
-    # Create minimal config for perl runtime only
-    echo "kb_perl_runtime ./build.runtime" > ubuntu-20/patric-minimal.dat && \
-    cd runtime-modules/kb_perl_runtime && \
+    cd runtime_build/runtime-modules/kb_perl_runtime && \
     perl build.perl $RT && \
     # Build modules with retries
     for i in 1 2 3; do \
