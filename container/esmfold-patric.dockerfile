@@ -35,6 +35,7 @@ RUN apt-get -y update && apt-get -y install --no-install-recommends \
       build-essential \
       cmake \
       # Utilities
+      ca-certificates \
       git \
       curl \
       wget \
