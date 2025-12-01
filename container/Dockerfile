@@ -17,13 +17,16 @@ WORKDIR /app
 RUN pip install --no-cache-dir \
     biopython \
     typing-extensions \
-    dllogger \
+#    dllogger \
     dm-tree \
     ml-collections \
     OpenFold==1.0.1
 
 # Install ESM after dependencies are ready
-RUN pip install --no-cache-dir "fair-esm[esmfold]"
+# RUN pip install --no-cache-dir "fair-esm[esmfold]"
+RUN pip install "fair-esm[esmfold]" && \
+    pip install 'dllogger @ git+https://github.com/NVIDIA/dllogger.git' && \
+    pip install 'openfold @ git+https://github.com/aqlaboratory/openfold.git@4b41059694619831a7db195b7e0988fc4ff3a307'
 
 # Download and cache ESMFold models
 # This pre-downloads the model to avoid runtime delays

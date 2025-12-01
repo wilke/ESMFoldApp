@@ -1,0 +1,93 @@
+# ESMFold Docker container using CUDA 12.9.1 base
+# Base image with CUDA 12.9.1, cuDNN, and Ubuntu 20.04
+FROM dxkb/dev:12.9.1-cudnn-devel-ubuntu20.04
+
+# Install system dependencies and Python
+RUN apt-get update && apt-get install -y \
+    python3.9 \
+    python3.9-dev \
+    python3-pip \
+    wget \
+    git \
+    curl \
+    build-essential \
+    libssl-dev \
+    libffi-dev \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create Python symlinks if needed
+RUN update-alternatives --install /usr/bin/python python /usr/bin/python3.9 1 && \
+    update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.9 1
+
+# Upgrade pip
+RUN python3 -m pip install --upgrade pip setuptools wheel
+
+# Set working directory
+WORKDIR /app
+
+# Install PyTorch with CUDA 12.1 support (closest available to 12.9)
+# Note: PyTorch may not have exact CUDA 12.9 builds, using 12.1 which should be compatible
+RUN pip3 install --no-cache-dir \
+    torch==2.1.2+cu121 \
+    torchvision==0.16.2+cu121 \
+    torchaudio==2.1.2+cu121 \
+    --index-url https://download.pytorch.org/whl/cu121
+
+# Install core scientific computing dependencies
+RUN pip3 install --no-cache-dir \
+    numpy \
+    scipy \
+    pandas \
+    matplotlib
+
+# Install ESMFold dependencies in correct order
+RUN pip3 install --no-cache-dir \
+    biopython \
+    typing-extensions \
+    dllogger \
+    dm-tree \
+    ml-collections \
+    omegaconf \
+    einops \
+    biotite
+
+# Install OpenFold (required for ESMFold)
+# Note: May need specific version for compatibility
+RUN pip3 install --no-cache-dir OpenFold==1.0.1
+
+# Install Fair-ESM with ESMFold support
+# This must come after all dependencies are installed
+RUN pip3 install --no-cache-dir "fair-esm[esmfold]"
+
+# Verify CUDA is accessible
+RUN python3 -c "import torch; print('PyTorch version:', torch.__version__); \
+                print('CUDA available:', torch.cuda.is_available()); \
+                print('CUDA version:', torch.version.cuda if torch.cuda.is_available() else 'N/A'); \
+                print('cuDNN version:', torch.backends.cudnn.version() if torch.cuda.is_available() else 'N/A')"
+
+# Download and cache ESMFold models
+# This pre-downloads the model to avoid runtime delays
+ENV TORCH_HOME=/data/models
+RUN mkdir -p /data/models && \
+    python3 -c "import esm; model = esm.pretrained.esmfold_v1()" || \
+    echo "Model download failed - will retry at runtime"
+
+# Create directories for input/output
+RUN mkdir -p /data/input /data/output /data/models
+
+# Set environment variables
+ENV ESMFOLD_MODEL_DIR=/data/models
+ENV PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:512
+ENV CUDA_VISIBLE_DEVICES=0
+ENV PYTHONUNBUFFERED=1
+
+# Copy wrapper script if it exists (optional)
+# COPY esm_fold_wrapper.py /app/esm_fold_wrapper.py
+# RUN chmod +x /app/esm_fold_wrapper.py
+
+# The esm-fold command should be installed with the package
+ENTRYPOINT ["esm-fold"]
+
+# Default command shows help
+CMD ["--help"]

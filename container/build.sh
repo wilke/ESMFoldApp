@@ -13,7 +13,7 @@ echo "Building ESMFold containers..."
 # Build Docker container
 if command -v docker &> /dev/null; then
     echo "Building Docker container..."
-    docker build -t esmfold:latest -f Dockerfile .
+    docker build --platform linux/amd64 -t esmfold:latest -f Dockerfile .
     echo "Docker container built successfully: esmfold:latest"
 else
     echo "Docker not found, skipping Docker build"

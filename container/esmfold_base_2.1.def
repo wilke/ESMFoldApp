@@ -1,5 +1,5 @@
 Bootstrap: localimage
-From: /nfs/ml_lab/projects/ml_lab/cepi/alphafold/images/cuda_11.3.1-devel-ubuntu20.04.sif
+From: /nfs/ml_lab/projects/ml_lab/cepi/alphafold/images/.sif
 
 %post
     echo "Building ESMFold 2.0 with Ubuntu 20.04 + CUDA 11.3.1 + PyTorch 1.12.1"
