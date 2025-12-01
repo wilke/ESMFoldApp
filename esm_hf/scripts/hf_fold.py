@@ -242,65 +242,63 @@ def run(args):
     num_sequences = len(all_sequences)
 
     for batch_idx, (headers, sequences) in enumerate(batches):
-        start = timer()
+        # Process each sequence individually to get accurate per-sequence pTM
+        # The HuggingFace model returns a single scalar pTM for batched inputs,
+        # which is incorrect. Processing one at a time ensures accurate metrics.
+        for header, seq in zip(headers, sequences):
+            start = timer()
 
-        try:
-            # Tokenize
-            tokenized_input = tokenizer(
-                sequences,
-                return_tensors="pt",
-                add_special_tokens=False
-            )['input_ids']
-            tokenized_input = tokenized_input.to(device)
+            try:
+                # Tokenize single sequence (no padding needed)
+                tokenized_input = tokenizer(
+                    [seq],
+                    return_tensors="pt",
+                    add_special_tokens=False,
+                )['input_ids']
+                tokenized_input = tokenized_input.to(device)
 
-            # Run inference
-            with torch.no_grad():
-                output = model(tokenized_input)
+                # Run inference
+                with torch.no_grad():
+                    output = model(tokenized_input)
 
-            # Convert to PDB
-            pdbs = convert_outputs_to_pdb(output)
+                # Convert to PDB
+                pdbs = convert_outputs_to_pdb(output)
+                pdb_string = pdbs[0]
 
-            # Calculate metrics
-            mean_plddts = output["plddt"].mean(dim=1).cpu().numpy()
-            ptms = output["ptm"].cpu().numpy() if "ptm" in output else [0.0] * len(sequences)
+                # Calculate metrics
+                # pLDDT: mean across sequence dimension
+                mean_plddt = float(output["plddt"][0].mean().cpu().item())
 
-            # Save outputs
-            tottime = timer() - start
-            time_string = f"{tottime / len(headers):.1f}s"
-            if len(sequences) > 1:
-                time_string = time_string + f" (amortized, batch size {len(sequences)})"
+                # pTM: scalar value for this sequence
+                if "ptm" in output:
+                    ptm = float(output["ptm"].cpu().item())
+                else:
+                    ptm = 0.0
 
-            for header, seq, pdb_string, mean_plddt, ptm in zip(
-                headers, sequences, pdbs, mean_plddts, ptms
-            ):
+                # Save output
+                tottime = timer() - start
                 output_file = args.pdb / f"{header}.pdb"
                 output_file.write_text(pdb_string)
                 num_completed += 1
 
                 logger.info(
                     f"Predicted structure for {header} with length {len(seq)}, "
-                    f"pLDDT {mean_plddt:.1f}, pTM {ptm:.3f} in {time_string}. "
+                    f"pLDDT {mean_plddt:.1f}, pTM {ptm:.3f} in {tottime:.1f}s. "
                     f"{num_completed} / {num_sequences} completed."
                 )
 
-        except RuntimeError as e:
-            if "out of memory" in str(e).lower():
-                if len(sequences) > 1:
+            except RuntimeError as e:
+                if "out of memory" in str(e).lower():
                     logger.error(
-                        f"Out of memory error on batch {batch_idx + 1} of size {len(sequences)}. "
-                        "Try lowering --max-tokens-per-batch or using --chunk-size."
-                    )
-                else:
-                    logger.error(
-                        f"Out of memory on sequence {headers[0]} of length {len(sequences[0])}. "
+                        f"Out of memory on sequence {header} of length {len(seq)}. "
                         "Try using --chunk-size or --cpu-only."
                     )
-                continue
-            raise
+                    continue
+                raise
 
-        except Exception as e:
-            logger.error(f"Error processing batch {batch_idx + 1}: {e}")
-            raise
+            except Exception as e:
+                logger.error(f"Error processing sequence {header}: {e}")
+                raise
 
     logger.info(f"Completed! Predicted {num_completed} / {num_sequences} structures")
 
