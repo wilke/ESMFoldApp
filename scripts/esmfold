@@ -1,0 +1,167 @@
+#!/usr/bin/env bash
+#
+# ESMFold command-line interface
+# Wrapper script for running ESMFold predictions
+#
+
+set -e
+
+# Default values
+INPUT=""
+OUTPUT=""
+NUM_RECYCLES=4
+CHUNK_SIZE=128
+CPU_ONLY=""
+CPU_OFFLOAD=""
+MAX_TOKENS=1024
+HELP=0
+
+# Container path (can be overridden by environment variable)
+ESMFOLD_CONTAINER="${ESMFOLD_CONTAINER:-/nfs/ml_lab/projects/ml_lab/cepi/alphafold/images/esmfold.v0.1.sif}"
+
+# Parse command line arguments
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        -i|--input)
+            INPUT="$2"
+            shift 2
+            ;;
+        -o|--output)
+            OUTPUT="$2"
+            shift 2
+            ;;
+        --num-recycles)
+            NUM_RECYCLES="$2"
+            shift 2
+            ;;
+        --chunk-size)
+            CHUNK_SIZE="$2"
+            shift 2
+            ;;
+        --cpu-only)
+            CPU_ONLY="--cpu-only"
+            shift
+            ;;
+        --cpu-offload)
+            CPU_OFFLOAD="--cpu-offload"
+            shift
+            ;;
+        --max-tokens-per-batch)
+            MAX_TOKENS="$2"
+            shift 2
+            ;;
+        -h|--help)
+            HELP=1
+            shift
+            ;;
+        *)
+            echo "Unknown option: $1"
+            exit 1
+            ;;
+    esac
+done
+
+# Show help message
+if [ $HELP -eq 1 ] || [ -z "$INPUT" ] || [ -z "$OUTPUT" ]; then
+    cat <<EOF
+ESMFold - Protein Structure Prediction
+
+Usage: esmfold -i INPUT -o OUTPUT [OPTIONS]
+
+Required Arguments:
+  -i, --input FILE             Input FASTA file with protein sequences
+  -o, --output DIR             Output directory for PDB files
+
+Optional Arguments:
+  --num-recycles N             Number of recycling iterations (0-4, default: 4)
+  --chunk-size N               Chunk size for processing (default: 128)
+  --cpu-only                   Use CPU only (no GPU acceleration)
+  --cpu-offload                Enable CPU offloading for large models
+  --max-tokens-per-batch N     Maximum tokens per batch (default: 1024)
+  -h, --help                   Show this help message
+
+Environment Variables:
+  ESMFOLD_CONTAINER           Path to ESMFold singularity container
+                              Default: $ESMFOLD_CONTAINER
+
+Examples:
+  # Basic usage
+  esmfold -i sequences.fasta -o results/
+
+  # CPU-only mode with custom chunk size
+  esmfold -i sequences.fasta -o results/ --cpu-only --chunk-size 64
+
+  # High accuracy mode with more recycles
+  esmfold -i sequences.fasta -o results/ --num-recycles 4
+
+EOF
+    exit 0
+fi
+
+# Check if input file exists
+if [ ! -f "$INPUT" ]; then
+    echo "Error: Input file not found: $INPUT"
+    exit 1
+fi
+
+# Create output directory if it doesn't exist
+mkdir -p "$OUTPUT"
+
+# Check if running in container or native mode
+if [ -f "$ESMFOLD_CONTAINER" ]; then
+    echo "Running ESMFold using container: $ESMFOLD_CONTAINER"
+    
+    # Detect GPU availability
+    GPU_FLAG=""
+    if command -v nvidia-smi &> /dev/null && [ -z "$CPU_ONLY" ]; then
+        GPU_FLAG="--nv"
+        echo "GPU detected, enabling acceleration"
+    fi
+    
+    # Get absolute paths
+    INPUT_ABS=$(readlink -f "$INPUT")
+    OUTPUT_ABS=$(readlink -f "$OUTPUT")
+    
+    # Run container
+    apptainer run $GPU_FLAG \
+        --bind "$INPUT_ABS:/input.fasta" \
+        --bind "$OUTPUT_ABS:/output" \
+        "$ESMFOLD_CONTAINER" \
+        python /app/esm_fold_wrapper.py \
+        -i /input.fasta \
+        -o /output \
+        --num-recycles $NUM_RECYCLES \
+        --chunk-size $CHUNK_SIZE \
+        --max-tokens-per-batch $MAX_TOKENS \
+        $CPU_ONLY \
+        $CPU_OFFLOAD
+        
+elif command -v python3 &> /dev/null; then
+    echo "Running ESMFold in native mode"
+    
+    # Find the wrapper script
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    WRAPPER="${SCRIPT_DIR}/../lib/ESMFoldWrapper.py"
+    
+    if [ ! -f "$WRAPPER" ]; then
+        echo "Error: ESMFold wrapper not found at $WRAPPER"
+        exit 1
+    fi
+    
+    # Run Python wrapper directly
+    python3 "$WRAPPER" \
+        -i "$INPUT" \
+        -o "$OUTPUT" \
+        --num-recycles $NUM_RECYCLES \
+        --chunk-size $CHUNK_SIZE \
+        --max-tokens-per-batch $MAX_TOKENS \
+        $CPU_ONLY \
+        $CPU_OFFLOAD
+else
+    echo "Error: Neither container nor Python environment found"
+    echo "Please set ESMFOLD_CONTAINER or install Python with ESMFold dependencies"
+    exit 1
+fi
+
+echo "ESMFold prediction completed successfully"
+echo "Results saved to: $OUTPUT"
