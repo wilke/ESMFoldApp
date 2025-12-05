@@ -35,12 +35,12 @@ RUN mkdir -p /data/input /data/output
 # Verify installation
 RUN python -c "import torch; import esm; print('PyTorch:', torch.__version__); print('ESM imported successfully')"
 
-# Copy our wrapper script
-COPY esm_fold_wrapper.py /app/esm_fold_wrapper.py
-RUN chmod +x /app/esm_fold_wrapper.py
+# Copy our wrapper script (from repository root context)
+COPY scripts/my-esm-fold /app/my-esm-fold
+RUN chmod +x /app/my-esm-fold
 
 # Entry point using our wrapper
-ENTRYPOINT ["python", "/app/esm_fold_wrapper.py"]
+ENTRYPOINT ["python", "/app/my-esm-fold"]
 
 # Default command shows help
 CMD ["--help"]

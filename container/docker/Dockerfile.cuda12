@@ -83,8 +83,8 @@ ENV CUDA_VISIBLE_DEVICES=0
 ENV PYTHONUNBUFFERED=1
 
 # Copy wrapper script if it exists (optional)
-# COPY esm_fold_wrapper.py /app/esm_fold_wrapper.py
-# RUN chmod +x /app/esm_fold_wrapper.py
+# COPY scripts/my-esm-fold /app/my-esm-fold
+# RUN chmod +x /app/my-esm-fold
 
 # The esm-fold command should be installed with the package
 ENTRYPOINT ["esm-fold"]
