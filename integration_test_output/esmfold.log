@@ -1,5 +1,0 @@
-usage: esm-fold [-h] -i FASTA -o PDB [-m MODEL_DIR]
-                [--num-recycles NUM_RECYCLES]
-                [--max-tokens-per-batch MAX_TOKENS_PER_BATCH]
-                [--chunk-size CHUNK_SIZE] [--cpu-only] [--cpu-offload]
-esm-fold: error: unrecognized arguments: esm-fold
