@@ -161,6 +161,12 @@ def create_parser():
              "Recommended values: 128, 64, 32. Lower = less memory, slower speed.",
     )
     parser.add_argument(
+        "--num-recycles",
+        type=int,
+        default=4,
+        help="Number of recycles to run. Defaults to number used in training (4).",
+    )
+    parser.add_argument(
         "--cpu-only",
         action="store_true",
         help="Run on CPU only (slower but works without GPU)",
@@ -230,6 +236,9 @@ def run(args):
     if args.chunk_size is not None:
         logger.info(f"Setting chunk size to {args.chunk_size}")
         model.trunk.set_chunk_size(args.chunk_size)
+
+    if args.num_recycles is not None:
+        model.config.esmfold_config.trunk.num_recycles = args.num_recycles
 
     model = model.to(device)
     model.eval()
