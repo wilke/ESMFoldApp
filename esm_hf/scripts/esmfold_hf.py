@@ -200,16 +200,19 @@ def run(args):
 
     args.pdb.mkdir(exist_ok=True, parents=True)
 
-    # Determine device
+    # Determine device: CUDA > MPS (Apple Silicon) > CPU
     if args.cpu_only:
         device = "cpu"
         logger.info("Using CPU")
+    elif torch.cuda.is_available():
+        device = "cuda"
+        logger.info(f"Using CUDA GPU: {torch.cuda.get_device_name(0)}")
+    elif torch.backends.mps.is_available():
+        device = "mps"
+        logger.info("Using Apple Silicon GPU (MPS)")
     else:
-        device = "cuda" if torch.cuda.is_available() else "cpu"
-        if device == "cuda":
-            logger.info(f"Using GPU: {torch.cuda.get_device_name(0)}")
-        else:
-            logger.warning("CUDA not available, falling back to CPU")
+        device = "cpu"
+        logger.warning("No GPU available, falling back to CPU")
 
     # Load sequences
     logger.info(f"Reading sequences from {args.fasta}")
@@ -224,14 +227,20 @@ def run(args):
         low_cpu_mem_usage=args.low_cpu_mem
     )
 
-    # Apply optimizations
-    if args.fp16 and device == "cuda":
-        logger.info("Converting language model to fp16")
-        model.esm = model.esm.half()
+    # Apply optimizations (CUDA-only)
+    if args.fp16:
+        if device == "cuda":
+            logger.info("Converting language model to fp16")
+            model.esm = model.esm.half()
+        else:
+            logger.warning("--fp16 is only supported on CUDA, ignoring")
 
-    if args.use_tf32 and device == "cuda":
-        logger.info("Enabling TensorFloat32")
-        torch.backends.cuda.matmul.allow_tf32 = True
+    if args.use_tf32:
+        if device == "cuda":
+            logger.info("Enabling TensorFloat32")
+            torch.backends.cuda.matmul.allow_tf32 = True
+        else:
+            logger.warning("--use-tf32 is only supported on CUDA (Ampere+), ignoring")
 
     if args.chunk_size is not None:
         logger.info(f"Setting chunk size to {args.chunk_size}")
@@ -308,6 +317,13 @@ def run(args):
             except Exception as e:
                 logger.error(f"Error processing sequence {header}: {e}")
                 raise
+
+            finally:
+                # Release accelerator memory between sequences
+                if device == "mps":
+                    torch.mps.empty_cache()
+                elif device == "cuda":
+                    torch.cuda.empty_cache()
 
     logger.info(f"Completed! Predicted {num_completed} / {num_sequences} structures")
 

@@ -51,7 +51,7 @@ all = [
 ]
 
 [project.scripts]
-esm-fold-hf = "scripts.hf_fold:main"
+esm-fold-hf = "scripts.esmfold_hf:main"
 
 [project.urls]
 Homepage = "https://github.com/facebookresearch/esm"
