@@ -19,6 +19,7 @@ jobs:
     - name: Build Docker container
       run: |
         docker build -t esmfold:test -f "$GITHUB_WORKSPACE/container/Dockerfile" .
+
     
     - name: Test container availability
       run: |
