@@ -13,7 +13,7 @@ From: /nfs/ml_lab/projects/ml_lab/cepi/alphafold/images/esmfold_base.sif
 
     # # Add app specifications
     # ../app_specs/ESMFold.json /app_specs/
-    modules-base.dat /ubuntu-bootstrap/modules-base.dat
+    config/modules-base.dat /ubuntu-bootstrap/modules-base.dat
 
 %post
     echo "Installing PATRIC runtime and BV-BRC environment..."

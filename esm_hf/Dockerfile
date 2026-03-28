@@ -230,8 +230,8 @@ ENV TRANSFORMERS_CACHE=/root/.cache/huggingface/transformers
 # Volume mount points
 VOLUME ["/data/input", "/data/output", "/root/.cache/huggingface"]
 
-# Default command - show installation test
-CMD ["python", "/workspace/test_installation.py"]
+# Default command
+CMD ["esm-fold-hf", "--help"]
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \

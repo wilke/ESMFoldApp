@@ -1,0 +1,77 @@
+# ESMFold Docker container for BV-BRC
+# Multi-stage build: compile OpenFold in devel, run in smaller runtime image
+
+#==============================================================================
+# Stage 1: Builder - compile OpenFold with CUDA toolkit
+#==============================================================================
+FROM pytorch/pytorch:2.0.1-cuda11.7-cudnn8-devel AS builder
+
+# Set CUDA environment variables for OpenFold compilation
+ENV CUDA_HOME=/usr/local/cuda
+ENV PATH=${CUDA_HOME}/bin:${PATH}
+ENV LD_LIBRARY_PATH=${CUDA_HOME}/lib64:${LD_LIBRARY_PATH}
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /build
+
+# Install Python dependencies needed for compilation
+# Pin torch to match the base image version to prevent fair-esm from upgrading to CUDA 12
+RUN pip install --no-cache-dir \
+    biopython \
+    typing-extensions \
+    dm-tree \
+    ml-collections \
+    scipy \
+    omegaconf \
+    einops
+
+# Install ESM and OpenFold (OpenFold requires nvcc to compile CUDA extensions)
+# Pin pytorch-lightning to version compatible with PyTorch 2.0.1 (2.6.0 requires newer torch)
+# Use --no-deps for fair-esm to prevent PyTorch version conflicts
+# Use deepspeed>=0.9.0 for PyTorch 2.0 compatibility (0.5.9 uses deprecated torch._six)
+RUN pip install --no-cache-dir --no-deps fair-esm && \
+    pip install --no-cache-dir "pytorch-lightning>=2.0,<2.1" "deepspeed>=0.9,<0.10" && \
+    pip install --no-cache-dir 'dllogger @ git+https://github.com/NVIDIA/dllogger.git' && \
+    pip install --no-cache-dir 'openfold @ git+https://github.com/aqlaboratory/openfold.git@4b41059694619831a7db195b7e0988fc4ff3a307'
+
+#==============================================================================
+# Stage 2: Runtime - smaller image for deployment
+#==============================================================================
+FROM pytorch/pytorch:2.0.1-cuda11.7-cudnn8-runtime
+
+# Install runtime dependencies only
+RUN apt-get update && apt-get install -y \
+    wget \
+    curl \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Copy entire site-packages from builder (includes compiled OpenFold)
+COPY --from=builder /opt/conda/lib/python3.10/site-packages /opt/conda/lib/python3.10/site-packages
+
+# Create wrapper script for esm-fold (entry point not created with --no-deps)
+RUN echo '#!/usr/bin/env python\nimport sys\nfrom esm.scripts.fold import main\nif __name__ == "__main__":\n    main()' > /opt/conda/bin/esm-fold && \
+    chmod +x /opt/conda/bin/esm-fold
+
+# Download and cache ESMFold models
+# This pre-downloads the model to avoid runtime delays
+RUN python -c "import esm; model = esm.pretrained.esmfold_v1()"
+
+# Create directories for input/output
+RUN mkdir -p /data/input /data/output /data/models
+
+# Set environment variables
+ENV ESMFOLD_MODEL_DIR=/data/models
+ENV PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:512
+
+# Use Python module directly for esm-fold
+ENTRYPOINT ["python", "-m", "esm.scripts.fold"]
+
+# Default command shows help
+CMD ["--help"]

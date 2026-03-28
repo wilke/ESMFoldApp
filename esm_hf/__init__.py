@@ -5,7 +5,7 @@
 
 __version__ = "1.0.0"
 
-from .scripts.hf_fold import (
+from .scripts.esmfold_hf import (
     read_fasta,
     convert_outputs_to_pdb,
     create_batched_sequences,

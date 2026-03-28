@@ -61,7 +61,7 @@ setup(
     extras_require=extras_require,
     entry_points={
         "console_scripts": [
-            "esm-fold-hf=scripts.hf_fold:main",
+            "esm-fold-hf=scripts.esmfold_hf:main",
         ],
     },
     include_package_data=True,

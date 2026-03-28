@@ -1,103 +1,107 @@
 # ESMFold Container Status
 
-**Last Updated**: 2025-09-04 14:00 PST
+**Last Updated**: 2025-12-05
 
 ## Current State
 
 ### ✅ Completed
-- Docker and Apptainer definition files created
-- Test data prepared with various protein sequences (5 test proteins)
-- Comprehensive testing strategy developed (3-stage approach)
-- Staged testing scripts for different environments (6 scripts)
-- Dependency issues fixed (PyTorch before ESM)
-- Custom CLI wrapper created (esm_fold_wrapper.py)
-- Documentation complete (5 documentation files)
-- CPU container builds successfully
-- Quick smoke test PASSED
-- Stage 1 syntax validation PASSED
-
-### ⚠️ Blocked
-- CPU container execution blocked by OpenFold dependency
-- Requires GPU environment for full OpenFold build
+- Container directory reorganized (docker/, apptainer/, tests/, config/)
+- Unified build script created (`build.sh`)
+- 4-stage testing strategy documented
+- Multiple container variants available (cuda11, cuda12, cpu, hf, bvbrc)
+- CLI wrapper created (`scripts/my-esm-fold`)
+- HuggingFace version available (`esm_hf/`)
+- Benchmarks documented (`docs/BENCHMARKS.md`)
 
 ### ⏳ Pending
-- Full GPU testing on H100 server
-- Performance benchmarking
-- Final validation to close issues #4, #5, #6
+- Full GPU testing on production servers
+- BV-BRC integration testing (Stage 4)
+- Performance validation against benchmarks
+
+## Container Variants
+
+| Variant | Base | GPU Support | Status |
+|---------|------|-------------|--------|
+| `esmfold:cuda11` | CUDA 11.3 | V100, A100 | Ready |
+| `esmfold:cuda12` | CUDA 12.1 | H100 | Ready |
+| `esmfold:cpu` | Python 3.10 | None | Ready |
+| `esmfold-hf` | PyTorch/HF | H100 | Ready |
+| `esmfold.sif` | Apptainer | V100, A100 | Ready |
+| `esmfold-bvbrc.sif` | + PATRIC | V100, A100 | Pending |
 
 ## Testing Stages
 
-| Stage | Environment | Status | Purpose |
-|-------|------------|--------|---------|
-| Quick Test | macOS | ✅ Fixed | Basic Docker checks |
-| Build Test | macOS | 🔄 Running | Container build validation |
-| Stage 1 | macOS | ⏳ Ready | Syntax validation |
-| Stage 2 | macOS | ⏳ Ready | CPU-only testing |
-| Stage 3 | H100 GPU | ⏳ Pending | Full GPU validation |
+| Stage | Environment | Status | Script |
+|-------|-------------|--------|--------|
+| 1 - Syntax | macOS | ✅ Pass | `tests/test_stage1_syntax.sh` |
+| 2 - CPU | macOS/Linux | ✅ Pass | `tests/test_stage2_cpu.sh` |
+| 3 - GPU | GPU Server | ⏳ Pending | `tests/test_stage3_gpu.sh` |
+| 4 - BV-BRC | GPU Server | ⏳ Pending | `tests/test_patric_integration.sh` |
 
-## Known Issues & Solutions
-
-### Issue 1: ESM requires PyTorch
-**Solution**: Install PyTorch before fair-esm in all Dockerfiles
-
-### Issue 2: esm-fold command not found
-**Solution**: Use flexible entry point that tries both `esm-fold` and `python -m esm.scripts.fold`
-
-### Issue 3: Platform compatibility (ARM64 macOS)
-**Solution**: Use `--platform linux/amd64` flag for x86_64 emulation
-
-## Next Steps
-
-1. **Immediate** (macOS):
-   - Complete build_test.sh execution
-   - Run minimal CPU folding test
-   - Validate container functionality
-
-2. **GPU Testing** (H100 server):
-   - Transfer Dockerfile to GPU server
-   - Run test_stage3_gpu.sh
-   - Benchmark performance
-
-3. **Completion**:
-   - Merge feature/container-testing branch
-   - Close issues #4, #5, #6
-   - Tag release
-
-## Files Structure
+## Directory Structure
 
 ```
 container/
-├── Dockerfile              # GPU-enabled production container
-├── Dockerfile.cpu          # CPU-only for testing
-├── esmfold.def            # Apptainer/Singularity definition
-├── esmfold.cwl            # CWL workflow description
-├── bvbrc_config.yaml      # BV-BRC configuration
-├── build.sh               # Build both container types
-├── test.sh                # Original comprehensive test
-├── build_test.sh          # Container build validation
-├── quick_test.sh          # 1-minute smoke test
-├── test_stage1_syntax.sh  # Syntax validation
-├── test_stage2_cpu.sh     # CPU-only testing
-├── test_stage3_gpu.sh     # Full GPU testing
-├── testing_strategy.md    # Testing approach documentation
-└── STATUS.md              # This file
+├── docker/
+│   ├── Dockerfile.cuda11      # CUDA 11.3 (V100/A100)
+│   ├── Dockerfile.cuda12      # CUDA 12.1 (H100)
+│   ├── Dockerfile.cpu         # CPU-only testing
+│   ├── Dockerfile.bvbrc       # BV-BRC Docker variant
+│   └── Dockerfile.dev         # Development container
+├── apptainer/
+│   ├── ESMFoldApp.def         # Production Apptainer
+│   ├── esmfold-base.def       # Base definition
+│   ├── esmfold-bvbrc.def      # BV-BRC integrated
+│   └── esmfold_pytorch.def    # PyTorch 2.x / H100
+├── config/
+│   ├── environment.yml        # Conda environment spec
+│   └── modules-base.dat       # PATRIC module list
+├── tests/
+│   ├── test_stage1_syntax.sh
+│   ├── test_stage2_cpu.sh
+│   ├── test_stage3_gpu.sh
+│   ├── test_stage3_gpu_apptainer.sh
+│   ├── test_patric_integration.sh
+│   ├── test_pytorch.py
+│   └── test_minimal.fasta
+├── archive/                   # Old/site-specific scripts
+├── build.sh                   # Unified build script
+├── README.md                  # Container documentation
+├── TESTING_STRATEGY.md        # Testing objectives & pipeline
+└── STATUS.md                  # This file
 ```
 
-## Command Reference
+## Quick Reference
 
-### Quick validation (macOS)
+### Build Commands
 ```bash
-./quick_test.sh       # 1 min basic checks
-./build_test.sh       # Build and validate container
+./build.sh docker cuda11     # Build CUDA 11 Docker image
+./build.sh docker cuda12     # Build CUDA 12 Docker image
+./build.sh docker cpu        # Build CPU-only image
+./build.sh apptainer prod    # Build production Apptainer
+./build.sh apptainer bvbrc   # Build BV-BRC Apptainer
+./build.sh test              # Run test suite
 ```
 
-### Full testing (after successful build)
+### Test Commands
 ```bash
-./test_stage1_syntax.sh  # Syntax check
-./test_stage2_cpu.sh     # CPU testing
+./tests/test_stage1_syntax.sh       # Syntax validation
+./tests/test_stage2_cpu.sh          # CPU testing
+./tests/test_stage3_gpu.sh          # GPU testing (requires GPU)
+./tests/test_patric_integration.sh  # BV-BRC integration
 ```
 
-### GPU testing (H100 server)
-```bash
-./test_stage3_gpu.sh     # Complete validation
-```
+## Related Files
+
+- `app_specs/ESMFold.json` - BV-BRC app specification
+- `service-scripts/App-ESMFold.pl` - BV-BRC service script
+- `scripts/my-esm-fold` - Python CLI wrapper
+- `esm_hf/` - HuggingFace Transformers version
+- `docs/BENCHMARKS.md` - Performance benchmarks
+
+## Next Steps
+
+1. Complete Stage 3 GPU testing on V100/A100/H100
+2. Build and test `esmfold-bvbrc.sif` (Stage 4)
+3. Validate PATRIC runtime integration
+4. Merge cleanup branch to main

@@ -7,11 +7,11 @@ doc: |
 
 label: "ESMFold Protein Structure Prediction"
 
-baseCommand: [esm-fold]
+baseCommand: [esm-fold-hf]
 
 requirements:
   DockerRequirement:
-    dockerPull: "esmfold:latest"
+    dockerPull: "dxkb/esmfold-bvbrc:latest-gpu"
   ResourceRequirement:
     coresMin: 4
     coresMax: 16
@@ -68,14 +68,6 @@ inputs:
       prefix: --cpu-only
       position: 6
     doc: "Run on CPU only (no GPU)"
-    default: false
-    
-  cpu_offload:
-    type: boolean?
-    inputBinding:
-      prefix: --cpu-offload
-      position: 7
-    doc: "Offload to CPU for memory efficiency"
     default: false
 
 outputs:

@@ -6,100 +6,127 @@ ESMFold protein structure prediction service integrated with the BV-BRC (Bacteri
 
 This application provides protein structure prediction using Meta's ESMFold model, packaged as a BV-BRC AppService module with GPU acceleration support.
 
-**Status**: Alpha Release v0.9.0 - Production ready for V100/A100 GPUs
+**Status**: Alpha Release v0.9.0
 
 ## Features
 
 - **ESMFold Integration**: Meta's state-of-the-art protein folding model (ESM2_t36_3B_UR50D)
-- **GPU Acceleration**: V100/A100 GPU support for fast prediction
+- **GPU Acceleration**: V100, A100, and H100 GPU support
+- **Two Implementations**: Original OpenFold-based and lightweight HuggingFace version
 - **BV-BRC Integration**: Full workspace I/O and service framework compatibility
-- **Resource Management**: Intelligent resource scaling based on sequence characteristics
-- **Container Deployment**: Apptainer/Singularity container runtime
+- **Container Deployment**: Docker and Apptainer/Singularity support
+
+## Container Versions
+
+| Version | Location | GPU Support | Use Case |
+|---------|----------|-------------|----------|
+| OpenFold (CUDA 11.3) | `container/docker/Dockerfile.cuda11` | V100, A100 | Production |
+| OpenFold (CUDA 12) | `container/docker/Dockerfile.cuda12` | V100, A100, H100 | H100 support |
+| HuggingFace | `esm_hf/` | V100, A100, H100 | Lightweight, no compilation |
+
+**Recommendation**: Use the HuggingFace version (`esm_hf/`) for new deployments - it's simpler to build and supports all GPU types.
 
 ## Quick Start
 
-### Prerequisites
-- Singularity/Apptainer runtime
-- NVIDIA GPU with CUDA 11.3+ support
-- BV-BRC workspace access
+### HuggingFace Version (Recommended)
 
-### Container Usage
 ```bash
-# Test ESMFold functionality
-singularity run --nv /nfs/ml_lab/projects/ml_lab/cepi/alphafold/images/esmfold.v0.1.sif esm-fold --help
+# Install
+cd esm_hf && pip install -e .
 
-# Run structure prediction
-singularity run --nv \
-  --bind input:/input,output:/output \
-  esmfold.v0.1.sif \
-  esm-fold -i /input/sequences.fasta -o /output
+# Run prediction
+esm-fold-hf -i sequences.fasta -o output/ --fp16 --chunk-size 64
+
+# Or use Docker
+docker build -t esmfold-hf:latest esm_hf/
+docker run --gpus all -v $(pwd):/data esmfold-hf:latest \
+  esm-fold-hf -i /data/input.fasta -o /data/output --fp16
 ```
 
-### BV-BRC Service Usage
+### OpenFold Version (Apptainer)
+
 ```bash
-# Submit job through BV-BRC AppService
+# Run structure prediction
+apptainer run --nv esmfold.sif \
+  esm-fold -i sequences.fasta -o output_dir
+```
+
+### BV-BRC Service
+
+```bash
 perl service-scripts/App-ESMFold.pl parameters.json
 ```
 
-## Performance Characteristics
+## Performance
 
-| Sequence Length | Memory | GPU Memory | Runtime | Notes |
-|----------------|--------|------------|---------|-------|
-| ≤400 aa        | 32GB   | 16GB       | ~10 min | Optimal range |
-| 400-800 aa     | 40GB   | 20GB       | ~15 min | Good performance |
-| 800-1500 aa    | 48GB   | 24GB       | ~30 min | Long sequences |
-| >1500 aa       | 64GB   | 32GB       | ~1 hour | Memory intensive |
+| Sequence Length | CPU Memory | GPU Memory | Runtime |
+|-----------------|------------|------------|---------|
+| ≤100 aa         | 24 GB      | 12 GB      | ~60s    |
+| ≤400 aa         | 32 GB      | 16 GB      | ~90s    |
+| ≤800 aa         | 48 GB      | 24 GB      | ~3 min  |
+| ≤1500 aa        | 64 GB      | 32 GB      | ~10 min |
+
+See [docs/BENCHMARKS.md](docs/BENCHMARKS.md) for detailed performance data.
 
 ## GPU Compatibility
 
-- ✅ **V100**: Fully supported (CUDA 11.3, PyTorch 1.12.1)
-- ✅ **A100**: Supported (compute capability 8.0)
-- ❌ **H100**: Not supported in alpha (requires PyTorch 2.0+)
+| GPU | OpenFold (CUDA 11) | OpenFold (CUDA 12) | HuggingFace |
+|-----|--------------------|--------------------|-------------|
+| V100 | Yes | Yes | Yes |
+| A100 | Yes | Yes | Yes |
+| H100 | No | Yes | Yes |
 
 ## Directory Structure
 
 ```
 ESMFoldApp/
+├── esm_hf/                 # HuggingFace implementation (recommended)
+│   ├── Dockerfile          # Docker container
+│   ├── esmfold_hf.def      # Apptainer container
+│   └── scripts/            # CLI tools
+│
+├── container/              # OpenFold-based containers
+│   ├── docker/             # Docker definitions
+│   │   ├── Dockerfile.cuda11
+│   │   ├── Dockerfile.cuda12
+│   │   └── Dockerfile.cpu
+│   ├── apptainer/          # Apptainer definitions
+│   │   ├── ESMFoldApp.def
+│   │   └── esmfold_pytorch.def
+│   └── tests/              # Container tests
+│
 ├── service-scripts/        # BV-BRC service implementation
-│   └── App-ESMFold.pl     # Main service script
-├── app_specs/             # Application specifications
-│   └── ESMFold.json       # BV-BRC app configuration
-├── scripts/               # Utility and wrapper scripts
-│   ├── esm-fold-wrapper   # Container wrapper script
-│   └── performance_test.sh # Benchmarking tool
-├── container/             # Container definitions and build scripts
-│   ├── ESMFoldApp.def     # Unified container definition
-│   └── build_unified.sh   # Build automation
-├── test/                  # Test suites and validation
-│   ├── test_service.sh    # Service validation
-│   └── integration_test.sh # End-to-end testing
-└── performance_results/   # Benchmarking data
+│   └── App-ESMFold.pl
+├── app_specs/              # BV-BRC application specs
+│   └── ESMFold.json
+├── docs/                   # Documentation
+│   └── BENCHMARKS.md
+└── test_data/              # Test sequences
 ```
 
 ## Testing
 
 ```bash
-# Run service tests
-./test/test_service.sh
+# HuggingFace version
+cd esm_hf && python -c "from transformers import EsmForProteinFolding; print('OK')"
 
-# Run integration tests
-./test/integration_test.sh
+# Container syntax validation
+./container/tests/test_stage1_syntax.sh
 
-# Run performance benchmarks
-./scripts/performance_test.sh
+# Full GPU testing
+./container/tests/test_stage3_gpu.sh
 ```
 
 ## Documentation
 
-- [Alpha Release Notes](ALPHA_RELEASE_NOTES.md) - Current release information and limitations
-- [Container Documentation Status](container/DOCUMENTATION_STATUS.md) - Technical details and provenance
-- [CLAUDE.md](CLAUDE.md) - Development guidelines and BV-BRC integration notes
+- [Benchmarks](docs/BENCHMARKS.md) - Performance data and reproducible tests
+- [Container Guide](container/README.md) - Container build and usage
+- [HuggingFace README](esm_hf/README.md) - Lightweight version documentation
+- [Alpha Release Notes](ALPHA_RELEASE_NOTES.md) - Release information
 
-## About this module
+## About
 
-This module is a component of the BV-BRC build system, designed to fit into the
-`dev_container` infrastructure which manages development and production deployment.
-More documentation is available [here](https://github.com/BV-BRC/dev_container/tree/master/README.md).
+This module is a component of the BV-BRC build system. It executes ESMFold within the BV-BRC environment with optimized resource management and GPU acceleration.
 
-This service executes ESMFold (https://github.com/facebookresearch/esm) within the BV-BRC environment with optimized resource management and GPU acceleration.
-
+- ESMFold: https://github.com/facebookresearch/esm
+- BV-BRC: https://www.bv-brc.org/

@@ -127,7 +127,7 @@ if [ -f "$ESMFOLD_CONTAINER" ]; then
         --bind "$INPUT_ABS:/input.fasta" \
         --bind "$OUTPUT_ABS:/output" \
         "$ESMFOLD_CONTAINER" \
-        python /app/esm_fold_wrapper.py \
+        python /app/my-esm-fold \
         -i /input.fasta \
         -o /output \
         --num-recycles $NUM_RECYCLES \
@@ -141,7 +141,7 @@ elif command -v python3 &> /dev/null; then
     
     # Find the wrapper script
     SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-    WRAPPER="${SCRIPT_DIR}/../lib/ESMFoldWrapper.py"
+    WRAPPER="${SCRIPT_DIR}/my-esm-fold"
     
     if [ ! -f "$WRAPPER" ]; then
         echo "Error: ESMFold wrapper not found at $WRAPPER"

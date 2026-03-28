@@ -1,0 +1,164 @@
+# ESMFold HuggingFace + PATRIC Runtime Integrated Container
+#
+# Multi-stage build integrating BV-BRC PATRIC runtime with ESMFold HF container.
+# Unlike the legacy Dockerfile.bvbrc (OpenFold-based), this uses the lightweight
+# HuggingFace Transformers implementation — no conda, no OpenFold compilation.
+#
+# Build (from repo root):
+#   docker build --platform linux/amd64 -t dxkb/esmfold-bvbrc:latest-gpu \
+#     -f container/docker/Dockerfile.esmfold-hf-bvbrc .
+#
+# Test:
+#   docker run --rm dxkb/esmfold-bvbrc:latest-gpu esm-fold-hf --help
+#   docker run --rm dxkb/esmfold-bvbrc:latest-gpu perl -MBio::KBase::AppService::AppScript -e 'print "OK\n"'
+
+# ============================================================================
+# Stage 1: PATRIC Runtime Builder
+# ============================================================================
+FROM ubuntu:20.04 AS runtime-builder
+
+LABEL stage=runtime-builder
+LABEL description="Build PATRIC/BV-BRC Perl runtime and modules"
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV BASE=/opt/patric-common
+ENV RT=$BASE/runtime
+ENV TARGET=$RT
+ENV BUILD_TOOLS=$RT/build-tools
+ENV PERL_MM_USE_DEFAULT=1
+ENV PERL_EXTUTILS_AUTOINSTALL="--defaultdeps"
+ENV CPANM_OPTS="--quiet --notest --force --skip-satisfied"
+
+# Set PATRIC runtime paths
+ENV PATH=$RT/bin:$PATH
+ENV PERL5LIB=$RT/lib/perl5:$PERL5LIB
+
+# Install system dependencies for building PATRIC runtime
+RUN apt-get -y update && apt-get -y install --no-install-recommends \
+      autoconf \
+      automake \
+      build-essential \
+      cmake \
+      ca-certificates \
+      git \
+      curl \
+      wget \
+      rsync \
+      libdb-dev \
+      libffi-dev \
+      libgd-dev \
+      liblzma-dev \
+      libmysqlclient-dev \
+      libncurses5-dev \
+      libpng-dev \
+      libreadline-dev \
+      libsqlite3-dev \
+      libxml2-dev \
+      zlib1g-dev \
+      perl \
+      cpanminus \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+# Create runtime directories
+RUN mkdir -p $RT/bin $RT/lib $RT/etc $RT/man
+
+# Clone and build runtime_build (Perl runtime only, minimal)
+RUN cd / && \
+    git clone --depth 1 https://github.com/BV-BRC/runtime_build && \
+    cd runtime_build/runtime-modules/kb_perl_runtime && \
+    perl build.perl $RT && \
+    for i in 1 2 3; do \
+      /usr/bin/perl build.modules -perl $RT/bin/perl && break || { \
+        echo "Attempt $i failed, retrying in 5s..."; sleep 5; \
+      }; \
+    done && \
+    $RT/bin/cpanm --quiet --notest JSON::XS && \
+    rm -rf /root/.cpan /root/.cpanm /tmp/* /var/tmp/*
+
+# Clone dev_container and checkout BV-BRC modules
+RUN cd / && \
+    git clone --depth 1 https://github.com/BV-BRC/dev_container.git && \
+    cd dev_container && \
+    ./checkout-bvbrc-modules && \
+    ./bootstrap $RT && \
+    . ./user-env.sh && \
+    make && \
+    rm -rf /root/.cpan /root/.cpanm /tmp/* /var/tmp/*
+
+# ============================================================================
+# Stage 2: Final ESMFold HF + PATRIC Image
+# ============================================================================
+FROM dxkb/esmfold:latest-gpu
+
+LABEL maintainer="BV-BRC ESMFold HF + PATRIC Container"
+LABEL description="ESMFold HuggingFace with BV-BRC PATRIC runtime for service integration"
+LABEL version="1.0.0-hf-patric"
+LABEL org.opencontainers.image.source="https://github.com/wilke/ESMFoldApp"
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install system Perl packages for PATRIC compatibility
+RUN apt-get -y update && apt-get -y install --no-install-recommends \
+      perl \
+      cpanminus \
+      libfindbin-libs-perl \
+      libjson-perl \
+      libjson-xs-perl \
+      libwww-perl \
+      libio-socket-ssl-perl \
+      libfile-slurp-perl \
+      libdata-dumper-simple-perl \
+      make \
+      git \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy PATRIC runtime and dev_container from builder stage
+COPY --from=runtime-builder /opt/patric-common /opt/patric-common
+COPY --from=runtime-builder /dev_container /dev_container
+
+# Set up BV-BRC/PATRIC environment variables
+ENV BASE=/opt/patric-common
+ENV RT=$BASE/runtime
+ENV KB_TOP=/kb/deployment
+ENV KB_RUNTIME=$RT
+ENV KB_MODULE_DIR=/kb/module
+ENV P3_WORKSPACE=/workspace
+ENV IN_BVBRC_CONTAINER=1
+
+# APPEND PATRIC to PATH to preserve ESMFold HF's Python
+ENV PATH=$PATH:/opt/patric-common/runtime/bin
+
+# Set up PERL5LIB with all BV-BRC module paths
+ENV KB_PERL_PATH=/dev_container/modules/app_service/lib:/dev_container/modules/Workspace/lib:/dev_container/modules/p3_core/lib:/dev_container/modules/p3_auth/lib:/dev_container/modules/p3_cli/lib:/dev_container/modules/p3_deployment/lib:/dev_container/modules/seed_core/lib:/dev_container/modules/seed_gjo/lib:/dev_container/modules/typecomp/lib:/dev_container/modules/sra_import/lib:/dev_container/modules/p3_user/lib:/dev_container/modules/p3_workspace/lib
+ENV PERL5LIB=/opt/patric-common/runtime/lib/perl5:$KB_PERL_PATH
+
+# Copy service files into container
+COPY service-scripts/App-ESMFold.pl /service-scripts/
+COPY app_specs/ESMFold.json /app_specs/
+
+# Make scripts executable
+RUN chmod +x /service-scripts/App-ESMFold.pl
+
+# Create necessary directories
+RUN mkdir -p /kb/deployment /kb/module /workspace
+
+# Verify installations
+RUN echo "=== Verifying ESMFold HF ===" && \
+    esm-fold-hf --help && \
+    echo "=== Verifying PATRIC Perl ===" && \
+    perl -v | head -2 && \
+    echo "=== Verifying BV-BRC Modules ===" && \
+    perl -MBio::KBase::AppService::AppScript -e 'print "Bio::KBase::AppService::AppScript OK\n"' && \
+    perl -MBio::P3::Workspace::WorkspaceClient -e 'print "Workspace client OK\n"'
+
+# Default working directory
+WORKDIR /workspace
+
+CMD ["esm-fold-hf", "--help"]
+
+# Health check - verify both ESMFold HF and PATRIC work
+HEALTHCHECK --interval=60s --timeout=30s --start-period=120s --retries=3 \
+    CMD esm-fold-hf --help > /dev/null 2>&1 && \
+        perl -MBio::KBase::AppService::AppScript -e 'print "OK\n"'

@@ -7,45 +7,63 @@ Modern, lightweight ESMFold protein structure prediction using HuggingFace Trans
 - **Simple Installation**: No OpenFold compilation or CUDA build dependencies
 - **Lightweight**: Uses HuggingFace Transformers with optimized attention
 - **Modern**: Built on actively maintained transformers library
-- **Flexible**: Supports GPU, CPU, fp16, and memory optimization options
+- **Flexible**: Supports CUDA GPU, Apple Silicon (MPS), and CPU execution
+- **Optimizable**: fp16, TF32, chunked attention, and memory management options
 - **Containerized**: Docker and Singularity support included
 
 ## Quick Start
 
 ### Installation
 
-#### Option 1: pip install (Recommended)
+#### macOS (Apple Silicon)
+
+Requires Python >= 3.12 and Homebrew. PyTorch uses the Metal Performance Shaders (MPS) backend for GPU acceleration on Apple Silicon.
 
 ```bash
+# Install Python 3.12 if needed
+brew install python@3.12
+
 # Create virtual environment
-python -m venv esm-hf-env
-source esm-hf-env/bin/activate  # Linux/Mac
-# or: esm-hf-env\Scripts\activate  # Windows
+/opt/homebrew/opt/python@3.12/bin/python3.12 -m venv .venv
+source .venv/bin/activate
 
-# Install PyTorch (visit pytorch.org for GPU-specific instructions)
-# For CUDA 12.1:
+# Install dependencies (MPS support is built into PyTorch)
+pip install torch transformers accelerate biopython
+```
+
+Tested with:
+| Package | Version |
+|---------|---------|
+| Python | 3.12.13 |
+| torch | 2.10.0 |
+| transformers | 5.3.0 |
+| accelerate | 1.13.0 |
+| biopython | 1.86 |
+
+#### Linux (CUDA GPU)
+
+```bash
+# Create virtual environment (Python >= 3.12 recommended)
+python3 -m venv .venv
+source .venv/bin/activate
+
+# Install PyTorch with CUDA support (visit pytorch.org for version-specific instructions)
 pip install torch --index-url https://download.pytorch.org/whl/cu121
-# For CPU only:
-pip install torch --index-url https://download.pytorch.org/whl/cpu
 
-# Install esm-hf
+# Install remaining dependencies
+pip install transformers accelerate biopython
+
+# Or install package in editable mode (includes all dependencies)
 pip install -e .
 ```
 
-#### Option 2: Conda
+#### Linux (CPU only)
 
 ```bash
-# Create conda environment
-conda create -n esm-hf python=3.10 -y
-conda activate esm-hf
-
-# Install PyTorch
-conda install pytorch pytorch-cuda=12.1 -c pytorch -c nvidia -y
-# or for CPU: conda install pytorch cpuonly -c pytorch -y
-
-# Install requirements and package
-pip install -r requirements.txt
-pip install -e .
+python3 -m venv .venv
+source .venv/bin/activate
+pip install torch --index-url https://download.pytorch.org/whl/cpu
+pip install transformers accelerate biopython
 ```
 
 ### Usage
@@ -53,21 +71,25 @@ pip install -e .
 #### Command Line Interface
 
 ```bash
-# Basic usage
+# Basic usage (auto-detects CUDA > MPS > CPU)
 esm-fold-hf -i input.fasta -o output_pdb_dir/
 
-# With GPU memory optimization
+# macOS Apple Silicon (MPS auto-detected, --chunk-size recommended)
+esm-fold-hf -i input.fasta -o output_pdb_dir/ --chunk-size 64
+
+# CUDA GPU with memory optimization
 esm-fold-hf -i input.fasta -o output_pdb_dir/ --fp16 --chunk-size 64
 
 # CPU-only mode (slower)
 esm-fold-hf -i input.fasta -o output_pdb_dir/ --cpu-only
 
-# Advanced options
+# Advanced options (CUDA)
 esm-fold-hf \
   -i input.fasta \
   -o output_pdb_dir/ \
   --max-tokens-per-batch 512 \
   --chunk-size 32 \
+  --num-recycles 4 \
   --fp16 \
   --use-tf32
 ```
@@ -111,11 +133,12 @@ print(f"Predicted structure with mean pLDDT: {mean_plddt:.2f}")
 | `-i, --fasta` | Input FASTA file (required) | - |
 | `-o, --pdb` | Output PDB directory (required) | - |
 | `-m, --model-name` | HuggingFace model name or local path | `facebook/esmfold_v1` |
+| `--num-recycles` | Number of recycling iterations (higher = better accuracy) | 4 |
 | `--max-tokens-per-batch` | Max tokens per batch (lower for less memory) | 1024 |
 | `--chunk-size` | Axial attention chunk size (32, 64, 128) | None |
 | `--cpu-only` | Force CPU execution | False |
-| `--fp16` | Use half precision for language model | False |
-| `--use-tf32` | Enable TensorFloat32 (Ampere GPUs) | False |
+| `--fp16` | Use half precision for language model (CUDA only) | False |
+| `--use-tf32` | Enable TensorFloat32 (CUDA Ampere+ only) | False |
 | `--low-cpu-mem` | Low CPU memory mode during loading | True |
 
 ## Building Containers
